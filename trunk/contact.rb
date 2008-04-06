@@ -11,7 +11,10 @@ class Contact
   
   def initialize
     @user_list = String.new
-    @contacts = YAML::load_file("user_contacts.yml")
+    @contacts = YAML::load(File.open('user_contacts.yml'))
+    if not @contacts
+      @contacts = Hash.new
+    end
     @url_photo = 'http://intra.epitech.eu/intra/photo.php?login='
   end
   #--- Add login to the YML contact file.

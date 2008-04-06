@@ -2,7 +2,7 @@
   Frame properties for RSOULng.
 =end
 begin
-  require 'socket'
+  require 'socket_soul'
   require 'contact'
   require 'dialog_chat'
 rescue LoadError
@@ -192,7 +192,7 @@ class MainFrame < Frame
     set_default_size(RS_DEFAULT_SIZE_W, RS_DEFAULT_SIZE_H)
     @connect = false
     @t = nil
-    @s = Socket.new
+    @s = SocketSoul.new
     ping_res = Ping.pingecho(RS_HOST, 2, RS_PORT)
     if not (ping_res)
       puts '/!\ Netsoul server is not reacheable...'
@@ -203,8 +203,8 @@ class MainFrame < Frame
     @contact = Contact.new
     @contact.get_users_photo()
     @user_view = UserView.new(@contact.contacts, @s)
-    @menu = menu()
-    @status_box = status_box()
+    @menu = get_menu()
+    @status_box = get_status_box()
     ## ContextId for statusbar :: init, connect, disconnect ##
     ##########################################################
     @status_bar = Gtk::Statusbar.new
@@ -218,7 +218,7 @@ class MainFrame < Frame
     server_connect()
   end
   
-  def menu
+  def get_menu
     accel_group = Gtk::AccelGroup.new
     add_accel_group(accel_group)
     item_factory = Gtk::ItemFactory.new(Gtk::ItemFactory::TYPE_MENU_BAR, '<main>', accel_group)
@@ -241,14 +241,14 @@ class MainFrame < Frame
 		  ["/_Tools"],
 		  #Help
 		  ["/_Help"],
-		  ["/_Help/_About", Gtk::ItemFactory::STOCK_ITEM,"<control>A", Gtk::Stock::DIALOG_INFO, Proc.new{menu_about()}]
+		  ["/_Help/_About", Gtk::ItemFactory::STOCK_ITEM,"<control>A", Gtk::Stock::DIALOG_INFO, Proc.new{get_menu_about()}]
                  ]
     item_factory.create_items(menu_items)
     menu = item_factory.get_widget('<main>')
     return menu
   end
   
-  def status_box
+  def get_status_box
     model = Gtk::ListStore.new(Gdk::Pixbuf, String, String, String)
     [[Gdk::Pixbuf.new(RS_ICON_STATE_ACTIVE, 24, 24), "Actif", "actif"],
      [Gdk::Pixbuf.new(RS_ICON_STATE_AWAY, 24, 24), "Away", "away"],
@@ -360,7 +360,7 @@ class MainFrame < Frame
     ## TODO Need here to disable connect button.
   end
   
-  def menu_about
+  def get_menu_about
     ad = Gtk::AboutDialog.new
     ad.set_modal(true)
     ad.set_title(RS_APP_NAME + " V" + RS_VERSION)
@@ -403,7 +403,7 @@ class MainFrame < Frame
       dialog.set_resizable(false)
       dialog.signal_connect('response') do
         if (login_entry.text != "" && msg_buffer.text != "")
-          @s.fSendMsg(login_entry.text, msg_buffer.text)
+          @s.send_msg(login_entry.text, msg_buffer.text)
         end
         msg_buffer.text = ""
       end
