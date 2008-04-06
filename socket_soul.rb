@@ -6,17 +6,17 @@ begin
 rescue LoadError
 end
 
-class RubySoulSocket
+class SocketSoul
   attr_reader :sock, :logger, :debug, :location, :state, :socket_num, :client_host, :client_port, :pre_cmd, :user_from
   attr_accessor :user, :current_cmd
 
-  def self.initialize
+  def initialize
     @sock = nil
     @current_cmd = nil
     @logger = Logger.new('logfile.log', 7, 1024000)
     @user_from = nil ## extern or internal client connexion
     begin
-      @user = YAML.load_file("user_prefs.yml");
+      @user = YAML::load(File.open('user_prefs.yml'));
     rescue
       @user = nil
       log_error("Can't load user prefs from user_prefs.yml file")
@@ -47,7 +47,7 @@ class RubySoulSocket
     msg = connect()
     @state = state
     cmd, @socket_num, md5_hash, @client_host, @client_port, server_timestamp = msg.split
-    data = YAML.load_file("data/data_config.yml")
+    data = YAML::load(File.open('data/data_config.yml'))
     @user_from = "ext"
     @auth_cmd = "user"
     @cmd = "cmd"
@@ -67,7 +67,7 @@ class RubySoulSocket
     end 
     reply_hash = Digest::MD5.hexdigest("%s-%s/%s%s" % [md5_hash, @client_host, @client_port, pass])
     sock_send("auth_ag " + @auth_cmd + " none none")
-    sock_send(@auth_cmd + "_log " + login + " " + reply_hash + " " + Socket::escape(@location) + " " + Socket::escape(user_ag))
+    sock_send(@auth_cmd + "_log " + login + " " + reply_hash + " " + SocketSoul::escape(@location) + " " + SocketSoul::escape(user_ag))
     sock_send("user_cmd attach")
     sock_send("user_cmd state " + state + ":" + Time.now.to_i.to_s) #--- ! get time stamp like rubysoul or rubysoul-server
     return true
@@ -93,7 +93,7 @@ class RubySoulSocket
   end
   
   def send_msg(users, msg)
-    sock_send(@cmd + " msg_user {" + users + "} msg " + Socket::escape(msg))
+    sock_send(@cmd + " msg_user {" + users + "} msg " + SocketSoul::escape(msg))
   end
   
   #--- ! Commande n'est plus gere
@@ -103,24 +103,30 @@ class RubySoulSocket
   ## end
   
   def watch_users(users)
-    sock_send(@cmd + " watch_log_user {" + users + "}")
+    if not users.to_s.empty?
+      sock_send(@cmd + " watch_log_user {" + users + "}")
+    end
     ## @current_cmd = "watch_log_user"
   end
   
   def who_users(users)
-    sock_send(@cmd + " who {" + users + "}")
+    if not users.to_s.empty?
+      sock_send(@cmd + " who {" + users + "}")
+    end
     ## @current_cmd = "who"
   end
   
   def set_user_status(status)
-    @user[:status] = status
-    sock_send(@cmd + " state " + status + ":" + Time.now.to_i.to_s) #--- ! get time stamp like rubysoul or rubysoul-server
+    if not status.to_s.empty?
+      @user[:status] = status
+      sock_send(@cmd + " state " + status + ":" + Time.now.to_i.to_s) #--- ! get time stamp like rubysoul or rubysoul-server
+    end
   end
   
-  def sock_send(string)
-    if (@sock)
-      @sock.puts string
-      log_debug("[send] : " + string)
+  def sock_send(str)
+    if (@sock && !str.to_s.empty?)
+      @sock.puts str.to_s
+      log_debug("[send] : " + str.to_s)
     end
   end
   
