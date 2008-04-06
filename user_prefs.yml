@@ -1,6 +1,6 @@
 #--- ! User config
 #--- ! If you have special char in your password don't forget simple cote, else all is ok.
 :login: kakesa_c
-:pass: '{]ztz,kH'
+:pass: 'password'
 :location: 'RubySoul-NG'
 :status: actif #--- ! actif, away, lock, idle || server, none, connection || paladutout
