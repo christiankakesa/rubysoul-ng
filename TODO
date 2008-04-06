@@ -1,0 +1,10 @@
+[TODO]
+build user_prefs dialogbox
+build contact management dialog
+build notebook chat window
+user_cmd msg_user {:socket} dotnetSoul_UserCancelledTyping null
+
+[OK :: 17/11/2006]
+Get contact informations with photo.
+http://intra/photo.php?login=kakesa_c => interne
+http://intra.etna-alternance.net/photo.php?login=kakesa_c => externe
