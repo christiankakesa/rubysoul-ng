@@ -3,7 +3,7 @@ RSOULng :: RubySoul Next Generation (2006-11-21)
 [DESCRIBE]
 RSOULng is an authenfication and instant messaging program made with gtk (ruby-gnome2).
 This program is usefull only for ETNA/EPITECH/EPITA/IPSA/ISBP student, who needs to be 
-authicate in PIE.
+authenticate in PIE (Students computer's park).
 
 [DEPENDS]
 ruby >= 1.8
