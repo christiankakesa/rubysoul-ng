@@ -1,20 +1,7 @@
 =begin
   Constants files for RSOULng.
 =end
-begin
-  require 'socket'
-  require 'yaml'
-  require 'digest/md5'
-  require 'uri'
-  require 'open-uri'
-  require 'gtk2'
-  require 'logger'
-  require 'thread'
-  require 'ping'
-  require 'gtktrayicon'
-rescue LoadError
-end
-#include Gtk
+
 ## APPLICATION CONFIG ##
 ########################
 RS_APP_NAME = "RubySoul-NG"
@@ -26,10 +13,7 @@ RS_AGENT = RS_APP_NAME + " - V" + RS_VERSION
 RS_DEFAULT_SIZE_W = 300
 RS_DEFAULT_SIZE_H = 600
 RS_DEFAULT_THEME = "msn"
-## SERVER AND PORT CONFIG ##
-############################
-RS_HOST = "ns-server.epita.fr"
-RS_PORT = 4242
+
 ## ICONS and IMAGES ##
 ######################
 RS_IMG_BG = File.dirname(__FILE__) + File::SEPARATOR + "images" + File::SEPARATOR + "background" + File::SEPARATOR + "etna_long.png"

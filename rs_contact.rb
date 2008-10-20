@@ -1,17 +1,20 @@
 =begin
-  NetSoul Contact Manager for RSOULng.
+  Developpers  : Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 =end
+
 begin
-  require 'config'
+	require 'rs_config'
 rescue LoadError
+	puts "Error: #{$!}"
+	exit
 end
 
-class Contact
+class RsContact
   attr_accessor :contacts, :user_list, :url_photo
   
   def initialize
     @user_list = String.new
-    @contacts = YAML::load(File.open('user_contacts.yml'))
+    @contacts = YAML::load(File.open('data/contacts.yml', 'r+b'))
     if not @contacts
       @contacts = Hash.new
     end
@@ -34,7 +37,7 @@ class Contact
   end
   #--- Save contact hash table to the YAML file
   def save
-    file = File.open('user_contacts.yml', "wb")
+    file = File.open('data/contacts.yml', "wb")
     file.puts '#--- ! User contact list'
     file.puts(@contacts.to_yaml)
     file.close

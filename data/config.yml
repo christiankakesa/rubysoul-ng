@@ -1,0 +1,13 @@
+#--- ! User config
+#--- ! If you have special char in your password don't forget simple cote, else all is ok.
+:login: kakesa_c
+:password: '{]ztz,kH'
+:auth: standard #--- ! standard, kerberos
+:user_data: 'On RSOULng'
+:state: actif #--- ! actif, away, lock, idle || server, none, connection || paladutout
+
+:auto_connect: false
+
+:server_host: ns-server.epita.fr
+:server_port: 4242
+

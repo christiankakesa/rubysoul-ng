@@ -1,24 +1,27 @@
 =begin
-  Frame properties for RSOULng.
+  Developpers  : Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 =end
 begin
-  require 'socket_soul'
-  require 'contact'
-  require 'dialog_chat'
+	require 'yaml'
+	require 'uri'
+	require 'open-uri'
+	require 'gtk2'
+	require 'thread'
+	#require 'gtktrayicon'
+	require 'lib/netsoul'
+	require 'rs_config'
+	require 'rs_about'
+	require 'rs_contact'
+	require 'rs_dialog'
 rescue LoadError
-end
-
-class Frame < Gtk::Window
-  def initialize
-    super(Gtk::Window::TOPLEVEL)
-    set_icon(Gdk::Pixbuf.new(RS_IMG_LOGO))
-  end
+	puts "Error: #{$!}"
+	exit
 end
 
 class UserView < Gtk::ScrolledWindow
   attr_accessor :contacts, :users_dialog
 
-  def initialize(contact_array, socket)
+  def initialize(contact_array, ns)
     super()
     set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC)
     @contacts = contact_array
@@ -29,26 +32,30 @@ class UserView < Gtk::ScrolledWindow
     @pix_status_renderer = Gtk::CellRendererPixbuf.new
     @pix_status_renderer.set_xalign(0.5)
     @pix_status_renderer.set_yalign(0.0)
-    @str_ll_renderer = Gtk::CellRendererText.new
-    @str_ll_renderer.set_alignment(Pango::ALIGN_LEFT)
-    @str_ll_renderer.set_wrap_mode(Pango::Layout::WRAP_CHAR)
+    @nstr_ll_renderer = Gtk::CellRendererText.new
+    @nstr_ll_renderer.set_alignment(Pango::ALIGN_LEFT)
+    @nstr_ll_renderer.set_wrap_mode(Pango::Layout::WRAP_CHAR)
     @pix_photo_renderer = Gtk::CellRendererPixbuf.new
     @pix_photo_renderer.set_xalign(0.0)
     @pix_photo_renderer.set_yalign(0.0)
-    @status_column = Gtk::TreeViewColumn.new("Status", @pix_status_renderer, :pixbuf => 0)
-    @status_column.set_min_width(24)
-    @login_ll_column = Gtk::TreeViewColumn.new("Login / Location", @str_ll_renderer, :markup => 1)
+    @nstatus_column = Gtk::TreeViewColumn.new("Status", @pix_status_renderer, :pixbuf => 0)
+    @nstatus_column.set_min_width(24)
+    @login_ll_column = Gtk::TreeViewColumn.new("Login / Location", @nstr_ll_renderer, :markup => 1)
     @login_ll_column.set_min_width(186)
     @photo_column = Gtk::TreeViewColumn.new("Photo", @pix_photo_renderer, :pixbuf => 2)
     @photo_column.set_min_width(32)
     @tv = Gtk::TreeView.new(@user_model)
-    @tv.append_column(@status_column)
+    @tv.append_column(@nstatus_column)
     @tv.append_column(@login_ll_column)
     @tv.append_column(@photo_column)
     @tv.headers_visible = false
     @tv.reorderable = false
     @tv.signal_connect("row-activated") do |view, path, column|
-       get_user_dialog(socket, view.model.get_iter(path)[3], view.model.get_iter(path)[4], @photo_dir + view.model.get_iter(path)[3].to_s, view.model.get_iter(path)[5]).show
+	#if (ns.connected)
+		get_user_dialog(ns, view.model.get_iter(path)[3], view.model.get_iter(path)[4], @photo_dir + view.model.get_iter(path)[3].to_s, view.model.get_iter(path)[5]).show_all
+	#else
+		#puts "You are not connected. No dialog box available"
+	#end
     end
     fill_treeview()
     add(@tv)
@@ -92,16 +99,16 @@ class UserView < Gtk::ScrolledWindow
     return true
   end
 
-  def get_user_dialog(socket, user_login, user_socket_id, user_pix_path, user_status)
-    puts "user_login == #{user_login}"
-    puts "user_socket_id == #{user_socket_id}"
-    puts "user_pix_path == #{user_pix_path}"
-    puts "user_status == #{user_status}"
-    if not (@user_dialogs.has_key?(user_socket_id.to_s))
-      @user_dialogs[user_socket_id.to_s] = C_DialogChat.new(self, socket, user_login, user_socket_id, user_pix_path, user_status)
-    end
-    return @user_dialogs[user_socket_id.to_s]
-  end
+	def get_user_dialog(ns, login, socket_id, pix_path, state)
+		puts "user_login == #{login}"
+		puts "user_socket_id == #{socket_id}"
+		puts "user_pix_path == #{pix_path}"
+		puts "user_status == #{state}"
+		if not (@user_dialogs.has_key?(login.to_s))
+			@user_dialogs[login.to_s] = RsDialog.new(self, ns, login, pix_path, state)
+		end
+		return @user_dialogs[login.to_s]
+	end
   
   def add_user_status(login, socket, status)
     @user_model.each do |model,path,iter|
@@ -180,42 +187,45 @@ class UserView < Gtk::ScrolledWindow
   end
 end
 
+class Frame < Gtk::Window
+  def initialize
+    super(Gtk::Window::TOPLEVEL)
+    set_icon(Gdk::Pixbuf.new(RS_IMG_LOGO))
+  end
+end
+
 class MainFrame < Frame
-  attr_reader :connect, :s, :t, :t_status, :status_bar, :status_box, :user_view, :menu
+  attr_reader :connect, :ns, :t, :t_status, :status_bar, :status_box, :user_view, :menu
   attr_accessor :contacts
   
   def initialize
-    super()
+    super
     ## type = Gtk::Window::TOPLEVEL
     set_title(RS_APP_NAME + " V" + RS_VERSION)
     set_border_width(0)
     set_default_size(RS_DEFAULT_SIZE_W, RS_DEFAULT_SIZE_H)
-    @connect = false
-    @t = nil
-    @s = SocketSoul.new
-    ping_res = Ping.pingecho(RS_HOST, 2, RS_PORT)
-    if not (ping_res)
-      puts '/!\ Netsoul server is not reacheable...'
-      @s.log_error("Netsoul server is not reacheable...")
-      quit()
-    end
     ## Don't move this after before creating @contact instance
-    @contact = Contact.new
-    @contact.get_users_photo()
-    @user_view = UserView.new(@contact.contacts, @s)
-    @menu = get_menu()
-    @status_box = get_status_box()
-    ## ContextId for statusbar :: init, connect, disconnect ##
-    ##########################################################
-    @status_bar = Gtk::Statusbar.new
-    @ctx_init_id = @status_bar.get_context_id("init")
-    @ctx_connect_id = @status_bar.get_context_id("connect")
-    @ctx_disconnect_id = @status_bar.get_context_id("disconnect")
-    @ctx_im_id = @status_bar.get_context_id("im") ## Instant messaging context for information in chat.
-    @ctx_current_id = @ctx_init_id
-    @status_bar.push(@ctx_init_id, RS_APP_NAME + " by Christian KAKESA")
-    ##########################################################
-    server_connect()
+	@connect = false
+	@t = nil
+	@ns = NetSoul::NetSoul.new(File.dirname(__FILE__) + File::SEPARATOR + "data" + File::SEPARATOR + "config.yml")
+	@contact = RsContact.new
+	@contact.get_users_photo()
+	@user_view = UserView.new(@contact.contacts, @ns)
+	@menu = get_menu()
+	@status_box = get_status_box()
+	## ContextId for statusbar :: init, connect, disconnect ##
+	##########################################################
+	@status_bar = Gtk::Statusbar.new
+	@ctx_init_id = @status_bar.get_context_id("init")
+	@ctx_connect_id = @status_bar.get_context_id("connect")
+	@ctx_disconnect_id = @status_bar.get_context_id("disconnect")
+	@ctx_im_id = @status_bar.get_context_id("im") ## Instant messaging context for information in chat.
+	@ctx_current_id = @ctx_init_id
+	@status_bar.push(@ctx_init_id, RS_APP_NAME + " by Christian KAKESA")
+	##########################################################
+	if (@ns.config[:auto_connect])
+		server_connect
+	end
   end
   
   def get_menu
@@ -248,38 +258,38 @@ class MainFrame < Frame
     return menu
   end
   
-  def get_status_box
-    model = Gtk::ListStore.new(Gdk::Pixbuf, String, String, String)
-    [[Gdk::Pixbuf.new(RS_ICON_STATE_ACTIVE, 24, 24), "Actif", "actif"],
-     [Gdk::Pixbuf.new(RS_ICON_STATE_AWAY, 24, 24), "Away", "away"],
-     [Gdk::Pixbuf.new(RS_ICON_STATE_IDLE, 24, 24), "Idle", "idle"],
-     [Gdk::Pixbuf.new(RS_ICON_STATE_LOCK, 24, 24), "Lock", "lock"]].each do |icon, name, status|
-      iter = model.append
-      iter[0] = icon
-      iter[1] = name
-      iter[2] = status
-    end
-    
-    sb = Gtk::ComboBox.new(model)
-    renderer = Gtk::CellRendererPixbuf.new
-    sb.pack_start(renderer, false)
-    sb.set_attributes(renderer, :pixbuf => 0)
-    renderer = Gtk::CellRendererText.new
-    sb.pack_start(renderer, true)
-    sb.set_attributes(renderer, :text => 1)
-    sb.sensitive = false
-    sb.signal_connect("changed") do
-      if (@connect)
-        @s.set_user_status(sb.active_iter[2])
-      end
-    end
-    return sb
-  end
+	def get_status_box
+		model = Gtk::ListStore.new(Gdk::Pixbuf, String, String, String)
+		[[Gdk::Pixbuf.new(RS_ICON_STATE_ACTIVE, 24, 24), "Actif", "actif"],
+		[Gdk::Pixbuf.new(RS_ICON_STATE_AWAY, 24, 24), "Away", "away"],
+		[Gdk::Pixbuf.new(RS_ICON_STATE_IDLE, 24, 24), "Idle", "idle"],
+		[Gdk::Pixbuf.new(RS_ICON_STATE_LOCK, 24, 24), "Lock", "lock"]].each do |icon, name, status|
+			iter = model.append
+			iter[0] = icon
+			iter[1] = name
+			iter[2] = status
+		end
+
+		sb = Gtk::ComboBox.new(model)
+		renderer = Gtk::CellRendererPixbuf.new
+		sb.pack_start(renderer, false)
+		sb.set_attributes(renderer, :pixbuf => 0)
+		renderer = Gtk::CellRendererText.new
+		sb.pack_start(renderer, true)
+		sb.set_attributes(renderer, :text => 1)
+		sb.sensitive = false
+		sb.signal_connect("changed") do
+			if (@connect)
+				@ns.sock_send(NetSoul::Message.set_state(sb.active_iter[2], @ns.get_server_timestamp))
+			end
+		end
+		return sb
+	end
   
   def update_status_box
     if (@connect)
       @status_box.sensitive = true
-      case @s.user[:status]
+      case @ns.user[:status]
       when "actif"
         @status_box.active = 0
       when "away"
@@ -297,15 +307,8 @@ class MainFrame < Frame
   end
   
   def server_connect
-    ping_res = Ping.pingecho(RS_HOST, 2, RS_PORT)
-    if not (ping_res)
-      puts '/!\ Netsoul server is not reacheable...'
-      @s.log_error("Netsoul server is not reacheable...")
-      quit()
-    end
-
     if not (@connect)
-      rs = @s.auth(@s.user[:login], @s.user[:pass], RS_AGENT, @s.user[:status])
+      rs = @ns.connect
       if (rs)
         @connect = true
         update_status_box()
@@ -315,7 +318,7 @@ class MainFrame < Frame
           @t = Thread.new do
             mutex.synchronize {
               while (true) do
-              	if (@connect or !@s.sock.nil?)
+              	if (@connect or !@ns.sock.nil?)
                   parse_cmd()
                 else
                   @connect = false
@@ -325,18 +328,16 @@ class MainFrame < Frame
             }
           end
         end
-        if (@s.user_from == "ext")
+        if (Location::get(@ns.connection_values[:client_ip]) == "ext")
           @contact.url_photo = "http://intra.epitech.eu/intra/photo.php?login="
         else
           @contact.url_photo = "http://intra/photo.php?login="
         end
-        @s.log_info("Authentification success...")
         set_status(@ctx_disconnect_id, "You are connected...")
         @user_view.show_all
-        @s.who_users(@contact.get_users_list())
-        @s.watch_users(@contact.get_users_list())
+        @ns.who_users(@contact.get_users_list())
+        @ns.watch_users(@contact.get_users_list())
       else
-        @s.log_erreur("Authentification failed..., Can't auth to NetSoul Server...")
         set_status(@ctx_disconnect_id, "Can't auth to NetSoul Server...")
       end
     end
@@ -344,15 +345,13 @@ class MainFrame < Frame
   
   def server_disconnect
     if (@connect)
-      @s.disconnect()
+      @ns.disconnect()
       if not (@t.nil? || !@t.alive? || !@t)
         @t.kill!
         @t = nil
       end
       @user_view.all_users_off()
       @user_view.hide()
-      @s.log_info("You are disconnected...")
-      @s.log_close()
     end
     @connect = false
     update_status_box()
@@ -360,31 +359,32 @@ class MainFrame < Frame
     ## TODO Need here to disable connect button.
   end
   
-  def get_menu_about
-    ad = Gtk::AboutDialog.new
-    ad.set_modal(true)
-    ad.set_title(RS_APP_NAME + " V" + RS_VERSION)
-    string = String.new
-    license = File.new(File.dirname(__FILE__) + File::SEPARATOR + "LICENSE", "r")
-    license.each_line do |line|
-      string << line
-    end
-    license.close()
-    ad.license = string; string = nil;
-    ad.artists = ["MSN ICONS:\n\t2005 Enhanced Labs | Michael Gonzalez | http://enhancedlabs.com"]
-    ad.authors = [RS_AUTHOR_NAME + " " + RS_AUTHOR_FIRSTNAME + "\n<" + RS_AUTHOR_EMAIL + ">"]
-    ad.comments = "ETNA/EPITECH/EPITA/IPSA/ISBP auth & instant messaging"
-    ad.copyright = "Copyright (C) 2006 " + RS_AUTHOR_NAME + " " + RS_AUTHOR_FIRSTNAME
-    ad.name = RS_APP_NAME
-    ad.version = RS_VERSION
-    ad.website = "Report to: " + RS_AUTHOR_EMAIL
-    ad.logo = Gdk::Pixbuf.new(RS_IMG_LOGO)
-    ad.set_icon(Gdk::Pixbuf.new(RS_IMG_LOGO))
-    ad.signal_connect('response') do
-      ad.destroy()
-    end	
-    ad.show_all()
-  end
+	def get_menu_about
+		ad = RsAbout.new
+		ad.set_modal(true)
+		ad.set_title(RS_APP_NAME + " V" + RS_VERSION)
+		ad.set_program_name(RS_APP_NAME)
+		str = String.new
+		l = File.new(File.dirname(__FILE__) + File::SEPARATOR + "data" + File::SEPARATOR + "LICENSE", "r")
+		l.each_line do |line|
+			str << line
+		end
+		l.close
+		ad.license = str; str = nil;
+		ad.artists = ["MSN ICONS:\n\t2005 Enhanced Labs | Michael Gonzalez | http://enhancedlabs.com"]
+		ad.authors = [RS_AUTHOR_NAME + " " + RS_AUTHOR_FIRSTNAME + "\n<" + RS_AUTHOR_EMAIL + ">"]
+		ad.comments = "ETNA/EPITECH/EPITA/IPSA/ISBP auth & instant messaging"
+		ad.copyright = "Copyright (C) 2006 " + RS_AUTHOR_NAME + " " + RS_AUTHOR_FIRSTNAME
+		ad.name = RS_APP_NAME
+		ad.version = RS_VERSION
+		ad.website = "Report to: " + RS_AUTHOR_EMAIL
+		ad.logo = Gdk::Pixbuf.new(RS_IMG_LOGO)
+		ad.set_icon(Gdk::Pixbuf.new(RS_IMG_LOGO))
+		ad.signal_connect('response') do
+			ad.destroy
+		end
+		ad.show_all
+	end
   
   def send_message_to
     if (@connect)
@@ -403,45 +403,38 @@ class MainFrame < Frame
       dialog.set_resizable(false)
       dialog.signal_connect('response') do
         if (login_entry.text != "" && msg_buffer.text != "")
-          @s.send_msg(login_entry.text, msg_buffer.text)
+          @ns.send_msg(login_entry.text, msg_buffer.text)
         end
         msg_buffer.text = ""
       end
       dialog.show_all()
     else
-      @s.log_warn("Your are not connected, you can't send a message with \"Send Message To...\" dialogbox. Try to connect before")
+      puts "Your are not connected, you can't send a message with \"Send Message To...\" dialogbox. Try to connect before"
     end
   end
 
   def parse_cmd
-    if (@s.sock && @connect)
-      buff = @s.sock_get
+    if (@ns.sock && @connect)
+      buff = @ns.sock_get
       case buff.match(/^(\w+)/)[1]
       when "ping"
         ping(buff)
-        return true
       when "rep"
         rep(buff)
-        return true
       when "user_cmd"
         user_cmd(buff)
-        return true
-      when "exec"
-        server_exec(buff)
-        return true
       else
-        @s.log_warn("Unknown command " + buff)
-        return false
+        puts "Unknown command " + buff
       end
     else
-      @s.log_error("You are not connected")
       set_status(@ctx_disconnect_id, "You are not connected")
       return false
     end
+	return true
   end
   
   def ping(cmd)
-    @s.sock_send(cmd.to_s)
+    @ns.sock_send(cmd.to_s)
     return true
   end
   
@@ -450,39 +443,22 @@ class MainFrame < Frame
     case msg_num.to_s
     when "001"
       #Command unknown
-      #puts msg_num + ": " + msg
-      @s.log_error("[Command unknown] " + msg_num.to_s + ": " + msg)
-      return false
+      puts '[Command unknown] %s:%s'%[msg_num.to_s, msg]
     when "002"
       #Nothing to do, all is right
-      #puts msg_num + ": " + msg
-      @s.log_info("[REP_OK] " +  msg_num.to_s + ": " + msg)
+      #puts '[REP_OK] %s:%s'%[msg_num.to_s, msg]
       return true
     when "003"
       #bad number of arguments
-      #puts msg_num + ": " + msg
-      @s.log_error("[Bad number of arguments]" + msg_num.to_s + ": " + msg)
-      return false
+      puts '[Bad number of arguments] %s:%s'%[msg_num.to_s, msg]
     when "033"
       #Login or password incorrect
-      #puts "Connexion failed, login or password incorrect..."
-      @s.log_error("[Login or password incorrect] " +  msg_num.to_s + ": " + msg)
-      return false
+      puts '[Login or password incorrect] %s:%s'%[msg_num.to_s, msg]
     else
       #puts "Something is wrong in \"REP\" command response..."
-      @s.log_warn("[Response not Yet implemented] " +  msg_num.to_s + ": " + msg)
+      puts '[Response not Yet implemented] %s:%s'%[msg_num.to_s, msg]
       return false
     end
-  end
-
-  def server_exec(buff)
-    cmd, action = buff.match(/^(\w+)\ (\w+)/)[1..2]
-    if (action.match(/reboot/))
-      disconnect()
-      ## TODO: try to reconnect here!!!
-    end
-    ## Need to be implemented for the other exec message
-    return true
   end
 
   def user_cmd(usercmd)
@@ -490,11 +466,11 @@ class MainFrame < Frame
     case cmd
     when "mail"
       sender, subject = usercmd.match(/^user_cmd\ [^\ ].*\ \|\ ([^\ ].*)\ \-f\ ([^\ ].*)\ ([^\ ].*)/)[2..3]
-      @s.log_debug("Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2])
+      @ns.log_debug("Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2])
       return true
     when "host"
       sender = usercmd.match(/^user_cmd\ [^\ ].*\ \|\ ([^\ ].*)\ ([^\ ].*)\ ([^\ ].*)/)[2]
-      @s.log_debug("Appel en en cours... !!!\nDe: " + URI.unescape(sender)[1..-1])
+      @ns.log_debug("Appel en en cours... !!!\nDe: " + URI.unescape(sender)[1..-1])
       return true
     when "user"
       sender = usercmd.match(/^user_cmd.*:(.*)@.*/)[1]
@@ -502,7 +478,7 @@ class MainFrame < Frame
       get_user_response(sender, sub_cmd, msg, user_info)
       return true
     else
-      @s.log_warn("[user_cmd] : " + usercmd + " - This command is not parsed, please contacte the developper")
+      @ns.log_warn("[user_cmd] : " + usercmd + " - This command is not parsed, please contacte the developper")
       return false
     end
   end
@@ -516,20 +492,20 @@ class MainFrame < Frame
     when "dotnetSoul_UserTyping"
       #| dotnetSoul_UserTyping null dst=kakesa_c
       #puts "dotnetSoul_UserTyping"
-      @s.log_debug("[dotnetSoul_UserTyping] : " + sender + " - " + sub_cmd + " - " + msg)
+      @ns.log_debug("[dotnetSoul_UserTyping] : " + sender + " - " + sub_cmd + " - " + msg)
       return true
     when "dotnetSoul_UserCancelledTyping"
       #| dotnetSoul_UserCancelledTyping null dst=kakesa_c
       #puts "dotnetSoul_UserCancelledTyping"
-      @s.log_debug("[dotnetSoul_UserCancelledTyping] : " + sender + " - " + sub_cmd + " - " + msg)
+      @ns.log_debug("[dotnetSoul_UserCancelledTyping] : " + sender + " - " + sub_cmd + " - " + msg)
       return true
     when "msg"
       #| msg ok dst=kakesa_c
       message, receiver = msg.match(/(.*)\ dst=(.*)/)[1..2]
-      uv = @user_view.get_user_dialog(@s, sender, socket, @user_view.photo_dir + sender.to_s, @contact.contacts[sender.to_s][:state][socket.to_i][:status]);
+      uv = @user_view.get_user_dialog(@ns, sender, socket, @user_view.photo_dir + sender.to_s, @contact.contacts[sender.to_s][:state][socket.to_i][:status]);
       uv.receive_msg(URI.unescape(message))
       uv.show_all()
-      @s.log_debug("[msg] : " + sender + " - " + sub_cmd + " - " + URI.unescape(msg))
+      @ns.log_debug("[msg] : " + sender + " - " + sub_cmd + " - " + URI.unescape(msg))
       return true
     when "who"
       ## For this command fill a @who_cmd data array with parsed data
@@ -549,7 +525,7 @@ class MainFrame < Frame
         @contact.contacts[login.to_s][:state][socket.to_i][:location] = location.to_s
         @user_view.contacts = @contact.contacts
         @user_view.add_user_status(login.to_s, socket.to_s, status.to_s)
-        @s.log_debug("[who] : " + sender + " - " + sub_cmd + " - " + msg)
+        @ns.log_debug("[who] : " + sender + " - " + sub_cmd + " - " + msg)
       end
       return true
     when "state"
@@ -565,12 +541,12 @@ class MainFrame < Frame
       @contact.contacts[sender.to_s][:state][socket.to_i][:location] = location.to_s
       @user_view.contacts = @contact.contacts
       @user_view.update_user_status(sender.to_s, socket.to_s, status.to_s)
-      @s.log_debug("[state] : " + sender + " - " + sub_cmd + " - " + msg)
+      @ns.log_debug("[state] : " + sender + " - " + sub_cmd + " - " + msg)
       return true
     when "login"
       ## puts "login msg : " + msg + " -- " + user_info
       @user_view.login_user_status(sender.to_s, socket.to_s, sub_cmd.to_s)
-      @s.log_debug("[login] : " + sender + " - " + sub_cmd + " - " + msg)
+      @ns.log_debug("[login] : " + sender + " - " + sub_cmd + " - " + msg)
       return true
     when "logout"
       ## puts "logout msg : " + msg
@@ -580,11 +556,11 @@ class MainFrame < Frame
       end
       @user_view.contacts = @contact.contacts
       @user_view.del_user_status(sender.to_s, socket.to_s, sub_cmd.to_s)
-      @s.log_debug("[logout] : " + sender + " - " + sub_cmd + " - " + msg)
+      @ns.log_debug("[logout] : " + sender + " - " + sub_cmd + " - " + msg)
       return true
     else
       ## puts "sub_cmd not reconize in fGetUserResponse : " + sub_cmd
-      @s.log_debug("[unknown sub command] : " + sender + " - " + sub_cmd + " - " + msg)
+      @ns.log_debug("[unknown sub command] : " + sender + " - " + sub_cmd + " - " + msg)
       return false
     end
   end
@@ -609,3 +585,4 @@ class MainFrame < Frame
     Gtk::main_quit()
   end
 end
+

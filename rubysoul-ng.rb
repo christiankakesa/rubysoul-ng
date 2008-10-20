@@ -1,11 +1,12 @@
-#!/usr/bin/ruby -w
 =begin
-  RSOULng.rb - Ruby/GTK NetSoul ETNA Client.
-  Copyright (c) 2006 Christian KAKESA.
+  Developpers  : Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 =end
+
 begin
-  require 'frame'
+	require 'rs_window'
 rescue LoadError
+	puts "Error: #{$!}"
+	exit
 end
 
 class RubySoulNG
