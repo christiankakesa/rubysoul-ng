@@ -1,7 +1,7 @@
 #--- ! User config
 #--- ! If you have special char in your password don't forget simple cote, else all is ok.
 :login: kakesa_c
-:password: '{]ztz,kH'
+:password: 'your_password'
 :auth: standard #--- ! standard, kerberos
 :user_data: 'On RSOULng'
 :state: actif #--- ! actif, away, lock, idle || server, none, connection || paladutout
