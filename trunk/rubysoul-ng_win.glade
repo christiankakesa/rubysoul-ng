@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Mon Nov  3 10:34:09 2008 -->
+<!--Generated with glade3 3.4.5 on Mon Nov  3 23:21:42 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="RubySoulNG">
     <property name="visible">True</property>
@@ -67,10 +67,19 @@
           </packing>
         </child>
         <child>
-          <widget class="GtkTreeView" id="user_view">
+          <widget class="GtkScrolledWindow" id="user_view_scrolledwindow">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
-            <property name="headers_clickable">True</property>
+            <property name="hscrollbar_policy">GTK_POLICY_NEVER</property>
+            <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+            <child>
+              <widget class="GtkTreeView" id="user_view">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="headers_visible">False</property>
+                <property name="search_column">1</property>
+              </widget>
+            </child>
           </widget>
           <packing>
             <property name="position">1</property>
@@ -80,10 +89,13 @@
           <widget class="GtkComboBox" id="state_box">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
+            <property name="extension_events">GDK_EXTENSION_EVENTS_ALL</property>
+            <property name="wrap_width">20</property>
             <property name="items" translatable="yes"></property>
           </widget>
           <packing>
             <property name="expand">False</property>
+            <property name="fill">False</property>
             <property name="position">2</property>
           </packing>
         </child>
@@ -285,7 +297,7 @@ SUCH DAMAGE.</property>
                           </packing>
                         </child>
                         <child>
-                          <widget class="GtkEntry" id="account_system_entry">
+                          <widget class="GtkEntry" id="account_user_group_entry">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="max_length">64</property>
@@ -324,10 +336,10 @@ SUCH DAMAGE.</property>
                           </packing>
                         </child>
                         <child>
-                          <widget class="GtkLabel" id="account_system_label">
+                          <widget class="GtkLabel" id="account_user_group_label">
                             <property name="visible">True</property>
                             <property name="xalign">1</property>
-                            <property name="label" translatable="yes">System : </property>
+                            <property name="label" translatable="yes">User group : </property>
                           </widget>
                           <packing>
                             <property name="top_attach">7</property>

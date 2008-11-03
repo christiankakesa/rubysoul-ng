@@ -1,12 +1,11 @@
-#--- ! RubySoulNG config file
---- 
-:login: login_l
+#--- ! RubySoulNG config file 
+:login: 
 :socks_password: 
 :unix_password: 
 :server_host: ns-server.epita.fr
 :server_port: "4242"
 :connection_type: md5
-:location: IONIS
-:system: 
+:location: "@ HOME"
+:user_group: IONIS
 :connection_at_startup: true
 :state: actif
