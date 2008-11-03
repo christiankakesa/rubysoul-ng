@@ -1,13 +1,12 @@
-#--- ! User config
-#--- ! If you have special char in your password don't forget simple cote, else all is ok.
-:login: kakesa_c
-:password: 'your_password'
-:auth: standard #--- ! standard, kerberos
-:user_data: 'On RSOULng'
-:state: actif #--- ! actif, away, lock, idle || server, none, connection || paladutout
-
-:auto_connect: false
-
+#--- ! RubySoulNG config file
+--- 
+:login: login_l
+:socks_password: 
+:unix_password: 
 :server_host: ns-server.epita.fr
-:server_port: 4242
-
+:server_port: "4242"
+:connection_type: md5
+:location: IONIS
+:system: 
+:connection_at_startup: true
+:state: actif
