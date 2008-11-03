@@ -1,48 +1,54 @@
 =begin
-  Developpers  : Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
+  Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 =end
 
 begin
-	require 'rs_config'
+  require 'rs_config'
+  require 'singleton'
 rescue LoadError
-	puts "Error: #{$!}"
-	exit
+  puts "Error: #{$!}"
+  exit
 end
 
 class RsContact
+  include Singleton
+
   attr_accessor :contacts, :user_list, :url_photo
-  
+
   def initialize
     @user_list = String.new
-    @contacts = YAML::load(File.open('data/contacts.yml', 'r+b'))
+    @contacts = YAML::load_file(RsConfig::CONTACTS_FILENAME)
     if not @contacts
       @contacts = Hash.new
     end
-    @url_photo = 'http://intra.epitech.eu/intra/photo.php?login='
+    @url_photo = RsConfig::CONTACTS_PHOTO_URL #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
   end
+
   #--- Add login to the YML contact file.
-  def add(login)
-    if not (@contacts.include?(login.to_s))
-      @contacts[login.to_s] = Hash.new
+  def add(login, save_it = false)
+    if not (@contacts.include?(login.to_sym))
+      @contacts[login.to_sym] = Hash.new
+      save() if save_it
     end
-    
   end
-  #--- Modify contact to the YML contact file.
-  def modify(login)
-  
-  end
+
   #--- Remove contact to the YML file.
-  def remove(login)
-  
+  def remove(login, save_it = false)
+    @contacts = @contacts.delete_if do |key, value|
+      key.eql?(login.to_sym)
+    end
+    save() if save_it
   end
+
   #--- Save contact hash table to the YAML file
   def save
-    file = File.open('data/contacts.yml', "wb")
-    file.puts '#--- ! User contact list'
-    file.puts(@contacts.to_yaml)
-    file.close
+    File.open(RsConfig::CONTACTS_FILENAME, "wb") do |file|
+      file.puts '#--- ! RubySoulNG contacts file'
+      file.puts @contacts.to_yaml
+      file.close()
+    end
   end
-  
+
   def get_users_list
     @user_list = String.new
     @contacts.each do |k, v|
@@ -53,7 +59,7 @@ class RsContact
   end
 
   def get_users_photo
-    dest_dir = File.dirname(__FILE__) + File::SEPARATOR + "images" + File::SEPARATOR + "contacts" + File::SEPARATOR
+    dest_dir = RsConfig::CONTACTS_PHOTO_DIR
     if not (FileTest.directory?(dest_dir))
       Dir.mkdir(dest_dir, 755)
     end
@@ -86,3 +92,4 @@ class RsContact
     end
   end
 end
+

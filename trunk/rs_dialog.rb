@@ -1,5 +1,5 @@
 =begin
-  Developpers  : Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
+  Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 =end
 
 begin
@@ -11,7 +11,7 @@ rescue LoadError
 end
 
 class RsDialog < Gtk::Window
-	attr_accessor :user_label, :msg_view_buffer, :msg_view, :msg_send_buffer, :msg_send_view, :user_img_view
+	attr_accessor :msg_view_buffer, :msg_view, :msg_send_buffer, :msg_send_view, :user_img_view
 
 	def initialize(parent, ns, login, pix_path, state)
 		super(login.to_s)
@@ -20,21 +20,18 @@ class RsDialog < Gtk::Window
 		set_title(login.to_s)
 		set_modal(false)
 		set_destroy_with_parent(true)
-		#hide_on_delete
 		@ns = ns
 		@login = login
-		@user_label = Gtk::Label.new(%Q[<span weight="normal" size="large">#{login.to_s}</span>])
-		@msg_view_buffer = Gtk::TextBuffer.new
+ 		@msg_view_buffer = Gtk::TextBuffer.new
 		@msg_view = Gtk::TextView.new(@msg_view_buffer)
 		@msg_view_scroll = Gtk::ScrolledWindow.new().add(@msg_view)
 		@msg_send_buffer = Gtk::TextBuffer.new
 		@msg_send_view = Gtk::TextView.new(@msg_send_buffer)
 		@msg_send_view_scroll = Gtk::ScrolledWindow.new().add(@msg_send_view)
 		@user_img_view = Gtk::Image.new(Gdk::Pixbuf.new(pix_path.to_s, 128, 128))
-		vbox.pack_start(Gtk::Frame.new("User login").set_size_request(250, 60).add(@user_label), false, false)
 		vbox.pack_start(Gtk::Frame.new("Dialog").add(@msg_view_scroll), false, false)
 		vbox.pack_start(Gtk::Frame.new("Message").add(@msg_send_view_scroll), false, true)
-		vbox.pack_end(Gtk::Frame.new("User image").add(@user_img_view), false, true)
+		vbox.pack_start(Gtk::Frame.new("User image").add(@user_img_view), false, true)
 		add(vbox)
 		signal_connect('delete-event') do |me, ev|
 			me.hide_all
