@@ -28,17 +28,6 @@ class RsConfig
   DEFAULT_SIZE_W = 300
   DEFAULT_SIZE_H = 600
 
-  ## ICONS ##
-  ###########
-  ICON_CONNECT = "Connect.png"
-  ICON_MULTICONNECT = "Multiconnect.png"
-  ICON_STATE_ACTIVE = "StateOnline.png"
-  ICON_STATE_AWAY = "StateAway.png"
-  ICON_STATE_IDLE = "StateIdle.png"
-  ICON_STATE_LOCK = "StateLock.png"
-  ICON_STATE_SERVER = "StateServer.png"
-  ICON_STATE_DISCONNECT = "StateDisconnect.png"
-
   CONFIG_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}config.yml"
   CONTACTS_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts.yml"
   CONTACTS_PHOTO_DIR = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts_photo#{File::SEPARATOR}"
@@ -46,6 +35,18 @@ class RsConfig
 
   @@theme_name = "msn"
   THEME_DIR = "#{APP_DIR+File::SEPARATOR}themes#{File::SEPARATOR+@@theme_name}"
+
+  ## ICONS ##
+  ###########
+  ICON_CONNECT = "#{THEME_DIR+File::SEPARATOR}Connect.png"
+  ICON_MULTICONNECT = "#{THEME_DIR+File::SEPARATOR}Multiconnect.png"
+  ICON_DISCONNECT = "#{THEME_DIR+File::SEPARATOR}Disconnect.png"
+  ICON_STATE_ACTIVE = "#{THEME_DIR+File::SEPARATOR}StateOnline.png"
+  ICON_STATE_AWAY = "#{THEME_DIR+File::SEPARATOR}StateAway.png"
+  ICON_STATE_IDLE = "#{THEME_DIR+File::SEPARATOR}StateIdle.png"
+  ICON_STATE_LOCK = "#{THEME_DIR+File::SEPARATOR}StateLock.png"
+  ICON_STATE_SERVER = "#{THEME_DIR+File::SEPARATOR}StateServer.png"
+  ICON_STATE_DISCONNECT = "#{THEME_DIR+File::SEPARATOR}StateDisconnect.png"
 
   attr_accessor :conf
 
