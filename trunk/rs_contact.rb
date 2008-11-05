@@ -3,6 +3,7 @@
 =end
 
 begin
+  require 'open-uri'
   require 'rs_config'
   require 'singleton'
 rescue LoadError
@@ -13,15 +14,15 @@ end
 class RsContact
   include Singleton
 
-  attr_accessor :contacts, :user_list, :url_photo
+  attr_accessor :contacts, :url_photo
 
   def initialize
-    @user_list = String.new
     @contacts = YAML::load_file(RsConfig::CONTACTS_FILENAME)
-    if not @contacts
+    if not @contacts.is_a?(Hash)
       @contacts = Hash.new
     end
     @url_photo = RsConfig::CONTACTS_PHOTO_URL #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
+    get_users_photo()
   end
 
   #--- Add login to the YML contact file.
@@ -42,9 +43,13 @@ class RsContact
 
   #--- Save contact hash table to the YAML file
   def save
+    c = Hash.new
+    @contacts.each do |k, v|
+      c[k.to_sym] = nil
+    end
     File.open(RsConfig::CONTACTS_FILENAME, "wb") do |file|
       file.puts '#--- ! RubySoulNG contacts file'
-      file.puts @contacts.to_yaml
+      file.puts c.to_yaml
       file.close()
     end
   end
@@ -69,7 +74,7 @@ class RsContact
     liste = lf.sort - exclude_dir
     lf.close
     liste.each do |f|
-      if (File.ftype(dest_dir + f) == "file")
+      if (File.ftype(dest_dir + File::SEPARATOR + f) == "file")
         files << f.to_s
       end
     end
@@ -81,7 +86,7 @@ class RsContact
           puts "Error: #{$!}"
         end
         if (hh)
-          h = File.open(dest_dir + k.to_s, "wb")
+          h = File.open(dest_dir + File::SEPARATOR + k.to_s, "wb")
           if (h)
             h.write(hh.read)
             h.close

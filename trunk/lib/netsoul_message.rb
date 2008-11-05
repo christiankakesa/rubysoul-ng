@@ -5,6 +5,7 @@
 begin
   require 'uri'
   require 'digest/md5'
+  require 'rs_config'
 rescue LoadError
   puts "Error: #{$!}"
 end
@@ -19,7 +20,7 @@ module NetSoul
       return 'ext_user_log %s %s %s %s'%[	connection_values[:login],
       auth_string,
       Message::escape(Location::get(connection_values[:client_ip]) == "ext" ? connection_values[:location] : Location::get(connection_values[:client_ip])),
-    Message::escape("#{RS_APP_NAME} #{RS_VERSION}")]
+    Message::escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
   end
 
   def self.kerberos_authentication(connection_values)
@@ -46,16 +47,8 @@ module NetSoul
     return 'user_cmd who {%s}'%[user_list]
   end
 
-  def self.who_user(user)
-    return 'user_cmd who %s'%[user]
-  end
-
   def self.watch_users(user_list)
     return 'user_cmd watch_log_user {%s}'%[user_list]
-  end
-
-  def self.watch_user(user)
-    return 'user_cmd watch_log_user %s'%[user]
   end
 
   def self.set_state(state, timestamp)
