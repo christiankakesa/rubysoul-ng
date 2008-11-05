@@ -4,7 +4,7 @@
 
 begin
   require 'socket'
-  require 'rs_config'
+  require 'singleton'
   require 'lib/netsoul_location'
   require 'lib/netsoul_message'
 rescue LoadError
@@ -14,11 +14,13 @@ end
 
 module NetSoul
   class NetSoul
+    include Singleton
+    
     attr_accessor :sock
     attr_reader :config, :connection_values, :connected, :authentificated
 
-    def initialize(config_filename)
-      @config = YAML::load_file(config_filename)
+    def initialize
+      @rs_config = RsConfig::instance()
       @connection_values = Hash.new
       @sock = nil
       @connected = false
@@ -26,7 +28,7 @@ module NetSoul
     end
 
     def connect
-      @sock = TCPSocket.new("ns-server.epita.fr", 4242)
+      @sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
       if (!@sock)
         return false
       end
@@ -36,13 +38,13 @@ module NetSoul
       @connection_values[:md5_hash] = md5_hash
       @connection_values[:client_ip] = client_ip
       @connection_values[:client_port] = client_port
-      @connection_values[:login] = @config[:login]
-      @connection_values[:socks_password] = @config[:socks_password]
-      @connection_values[:unix_password] = @config[:unix_password]
-      @connection_values[:state] = @config[:state]
-      @connection_values[:location] = @config[:location]
-      @connection_values[:user_group] = @config[:user_group]
-      @connection_values[:system] = @config[:system]
+      @connection_values[:login] = @rs_config.conf[:login]
+      @connection_values[:socks_password] = @rs_config.conf[:socks_password]
+      @connection_values[:unix_password] = @rs_config.conf[:unix_password]
+      @connection_values[:state] = @rs_config.conf[:state]
+      @connection_values[:location] = @rs_config.conf[:location]
+      @connection_values[:user_group] = @rs_config.conf[:user_group]
+      @connection_values[:system] = RUBY_PLATFORM
       @connection_values[:timestamp_diff] = server_timestamp_diff
       return auth
     end
@@ -55,7 +57,7 @@ module NetSoul
         return false
       end
 
-      if (@config[:unix_password].length > 0)
+      if (@rs_config.conf[:unix_password].to_s.length > 0)
         sock_send(Message.kerberos_authentication(@connection_values))
       else
         sock_send(Message.standard_authentication(@connection_values))
@@ -64,7 +66,7 @@ module NetSoul
       if (sock_get().split(' ')[1] == "002")
         @authentificated = true
         sock_send("user_cmd attach")
-        Message.set_state(@config[:state], get_server_timestamp)
+        Message.set_state(@rs_config.conf[:state], get_server_timestamp())
       else
         return false
       end
@@ -72,7 +74,7 @@ module NetSoul
     end
 
     def disconnect
-      sock_send(Message.deconnexion)
+      sock_send(Message.deconnexion())
       @authenticated = false
       sock_close
       @connected = false

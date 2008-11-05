@@ -30,7 +30,7 @@ class RsConfig
 
   CONFIG_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}config.yml"
   CONTACTS_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts.yml"
-  CONTACTS_PHOTO_DIR = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts_photo#{File::SEPARATOR}"
+  CONTACTS_PHOTO_DIR = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts_photo"
   CONTACTS_PHOTO_URL = "http://intra.epitech.eu/intra/photo.php?login="
 
   @@theme_name = "msn"
