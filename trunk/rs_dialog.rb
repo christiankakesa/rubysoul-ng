@@ -12,10 +12,10 @@ rescue LoadError
 end
 
 class RsDialog < Gtk::Window
-  attr_accessor
+  #attr_accessor :receive_msg
 
   def initialize(login, num_session)
-    super("#{login.to_s} : #{num_session.to_s}")
+    super("#{login.to_s}")
     @login = login.to_s
     @num_session = num_session.to_i
     @ns = NetSoul::NetSoul::instance()

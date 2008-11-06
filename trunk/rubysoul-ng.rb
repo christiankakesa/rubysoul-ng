@@ -62,6 +62,7 @@ class RubySoulNG
 
   def connection
     if @ns.connect()
+      @rsng_user_view.set_sensitive(true)
       rsng_state_box_update()
       @parse_thread = Thread.new do
         while (@ns.connected) do
@@ -76,8 +77,29 @@ class RubySoulNG
   end
   def disconnection
     @ns.disconnect()
+    @parse_thread.kill!
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
+    @user_model.clear()
+    @rs_contact.contacts.each do |key, value|
+      h = @user_model.append(nil)
+      h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+      h.set_value(1, %Q[<span weight="bold" size="large">#{key.to_s}</span>])
+      if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
+        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
+      else
+        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+      end
+      h.set_value(3, key.to_s)
+      h.set_value(4, "num_session")
+      h.set_value(5, "status")
+      h.set_value(6, "user_data")
+      h.set_value(7, "location")
+      h.set_value(8, "user_agent")
+    end
+    @rsng_user_view.set_sensitive(false)
+    @rsng_state_box.set_sensitive(false)
+    @rs_contact.load_contacts()
   end
 
   def parse_cmd
@@ -126,7 +148,7 @@ class RubySoulNG
     cmd, user	= NetSoul::Message::trim(usercmd.split('|')[0]).split(' ')
     response	= NetSoul::Message::trim(usercmd.split('|')[1])
     sub_cmd	= NetSoul::Message::trim(user.split(':')[1])
-    case sub_cmd
+    case sub_cmd.to_s
     when "mail"
       sender, subject = response.split(' ')[2..3]
       msg = "Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2]
@@ -168,20 +190,44 @@ class RubySoulNG
       return true
     when "msg"
       msg = URI.unescape(response.split(' ')[1])
-      socket = user.split(":")[0]
+      socket = response.split(' ')[1]
       login = sender.to_s
       if not @user_dialogs.include?(login.to_sym)
-          @user_dialogs[login.to_sym] = RsDialog.new(login, socket)
-          @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
-            @user_dialogs[login.to_sym].hide_all()
-          end
+        @user_dialogs[login.to_sym] = RsDialog.new(login, socket)
+        @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
+          @user_dialogs[login.to_sym].hide_all()
         end
-        @user_dialogs.receive_msg(msg)
-        @user_dialogs.set_focus(true)
-        @user_dialogs[login.to_sym].show_all()
+      end
+      @user_dialogs.receive_msg(login, msg)
+      @user_dialogs.has_focus(true)
+      @user_dialogs[login.to_sym].show_all()
       puts "[msg] : " + sender + " - " + sub_cmd + " - " + msg
       return true
     when "who"
+      if not response.match(/cmd end$/)
+        socket = response.split(' ')[1]
+        login = response.split(' ')[2]
+        status = response.split(' ')[11].split(':')[0]
+        user_data = URI.unescape(user.split(':')[6])
+        location = URI.unescape(user.split(':')[5])
+        user_agent = URI.unescape(response.split(' ')[12])
+        if not @rs_contact.contacts[login.to_sym].is_a?(Hash)
+          @rs_contact.contacts[login.to_sym] = Hash.new
+        end
+        if not (@rs_contact.contacts[login.to_sym].include?(:connections))
+          @rs_contact.contacts[login.to_sym][:connections] = Hash.new
+        end
+        if not (@rs_contact.contacts[login.to_sym][:connections].include?(socket.to_i))
+          @rs_contact.contacts[login.to_sym][:connections][socket.to_i] = Hash.new
+        end
+        @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:num_session] = socket.to_s
+        @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:status] = status.to_s
+        @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
+        @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
+        @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_agent] = user_agent.to_s
+      else
+        rsng_user_view_update()
+      end
       puts "[who] : " + sender + " - " + sub_cmd + " - " + response
       return true
     when "state"
@@ -225,12 +271,12 @@ class RubySoulNG
     @aboutdialog.hide_all()
   end
   def rsng_user_view_init
-    #--- | ICON_STATE, HTML Login, PHOTO, Login, {sublist} SessionNum, State, UserData
-    @user_model = Gtk::TreeStore.new(Gdk::Pixbuf, String, Gdk::Pixbuf, String, String, String, String)
+    #--- | ICON_STATE, HTML Login, PHOTO, Login, {sublist} SessionNum, State, UserData, Location, UserAgent
+    @user_model = Gtk::TreeStore.new(Gdk::Pixbuf, String, Gdk::Pixbuf, String, String, String, String, String, String)
     @user_model.set_sort_column_id(1)
     @rsng_user_view.set_model(@user_model)
     renderer = Gtk::CellRendererPixbuf.new
-    renderer.set_xalign(1.0)
+    renderer.set_xalign(0.5)
     renderer.set_yalign(0.5)
     column = Gtk::TreeViewColumn.new("Status", renderer, :pixbuf => 0)
     @rsng_user_view.append_column(column)
@@ -254,29 +300,104 @@ class RubySoulNG
       end
       h.set_value(3, key.to_s)
       h.set_value(4, "num_session")
-      h.set_value(5, "state")
+      h.set_value(5, "status")
       h.set_value(6, "user_data")
+      h.set_value(7, "location")
+      h.set_value(8, "user_agent")
     end
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
-      if @ns.connected
+      if (	view.model.get_iter(path)[5].to_s.eql?("actif") or
+      		view.model.get_iter(path)[5].to_s.eql?("away")	or
+      		view.model.get_iter(path)[5].to_s.eql?("busy")  or
+      		view.model.get_iter(path)[5].to_s.eql?("idle")  or
+      		view.model.get_iter(path)[5].to_s.eql?("lock")
+      	  )
         login = view.model.get_iter(path)[3]
         num_session = view.model.get_iter(path)[4]
         state = view.model.get_iter(path)[5]
         user_data = view.model.get_iter(path)[6]
         if not @user_dialogs.include?(login.to_sym)
           @user_dialogs[login.to_sym] = RsDialog.new(login, num_session)
+          @user_dialogs[login.to_sym].set_can_focus(true)
           @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
             @user_dialogs[login.to_sym].hide_all()
           end
         end
         @user_dialogs[login.to_sym].show_all()
-      else
-        RsInfobox.new(@parent_win, "You are not connected. No dialog box available", "warning")
       end
     end
   end
   def rsng_user_view_update
-    RsInfobox.new(@rsng_win, "[FUNCTION] rsng_user_view_update() not yet implemented", "warning")
+    @user_model.clear()
+    @rs_contact.contacts.each do |key, val|
+      login = key
+      if not @rs_contact.contacts[login.to_sym].include?(:connections)
+        iter = @user_model.append(nil)
+        iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_STATE_DISCONNECT, 24, 24))
+        iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+        if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+          iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+        else
+          iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+        end
+        iter.set_value(3, login.to_s)
+        iter.set_value(4, "num_session")
+        iter.set_value(5, "status")
+        iter.set_value(6, "user_data")
+        iter.set_value(7, "location")
+        iter.set_value(8, "user_agent")
+      # elsif @rs_contact.contacts[login.to_sym][:connections].length == 1
+      elsif val[:connections].length == 1
+        val[:connections].each do |ke, va|
+		    iter = @user_model.append(nil)
+		    iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(va[:status]), 24, 24))
+		    iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+		    if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+		    else
+		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+		    end
+		    iter.set_value(3, login.to_s)
+		    iter.set_value(4, ke.to_s)
+		    iter.set_value(5, va[:status])
+		    iter.set_value(6, va[:user_data])
+		    iter.set_value(7, va[:location])
+		    iter.set_value(8, va[:user_agent])
+        end
+      elsif val[:connections].length > 1
+        iter = @user_model.append(nil)
+        iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
+        iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+        #if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+        #  iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+        #else
+        #  iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+        #end
+        iter.set_value(2, nil)
+        iter.set_value(3, login.to_s)
+        iter.set_value(4, "num_session")
+        iter.set_value(5, "status")
+        iter.set_value(6, "user_data")
+        iter.set_value(7, "location")
+        iter.set_value(8, "user_agent")
+		val[:connections].each do |k, v|
+		    it = @user_model.append(iter)
+		    it.set_value(0, Gdk::Pixbuf.new(get_status_icon(v[:status]), 24, 24))
+		    it.set_value(1, %Q[<span weight="bold" size="large">#{v[:user_agent].to_s}</span>])
+		    if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+		      it.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+		    else
+		      it.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+		    end
+		    it.set_value(3, login.to_s)
+		    it.set_value(4, k.to_s)
+		    it.set_value(5, v[:status])
+		    it.set_value(6, v[:user_data])
+		    it.set_value(7, v[:location])
+		    it.set_value(8, v[:user_agent])
+        end
+      end
+    end
   end
   def rsng_state_box_init
     model = Gtk::ListStore.new(String, Gdk::Pixbuf, String)
@@ -287,8 +408,9 @@ class RubySoulNG
     renderer = Gtk::CellRendererText.new
     @rsng_state_box.pack_end(renderer, true)
     @rsng_state_box.set_attributes(renderer, :text => 2)
-    [["actif", Gdk::Pixbuf.new(RsConfig::ICON_STATE_ACTIVE, 24, 24), "Actif"],
+    [["actif", Gdk::Pixbuf.new(RsConfig::ICON_STATE_ACTIF, 24, 24), "Actif"],
     ["away", Gdk::Pixbuf.new(RsConfig::ICON_STATE_AWAY, 24, 24), "Away"],
+    ["busy", Gdk::Pixbuf.new(RsConfig::ICON_STATE_BUSY, 24, 24), "Busy"],
     ["idle", Gdk::Pixbuf.new(RsConfig::ICON_STATE_IDLE, 24, 24), "Idle"],
     ["lock", Gdk::Pixbuf.new(RsConfig::ICON_STATE_LOCK, 24, 24), "Lock"]].each do |state, icon, name|
       iter = model.append()
@@ -313,10 +435,12 @@ class RubySoulNG
         @rsng_state_box.active = 0
       when "away"
         @rsng_state_box.active = 1
-      when "idle"
+      when "busy"
         @rsng_state_box.active = 2
-      when "lock"
+      when "idle"
         @rsng_state_box.active = 3
+      when "lock"
+        @rsng_state_box.active = 4
       else
         @rsng_state_box.active = 0
       end
@@ -324,19 +448,63 @@ class RubySoulNG
       @rsng_state_box.set_sensitive(false)
     end
   end
+  def get_status_icon(status)
+    res = String.new
+    case status.to_s
+    when "actif"
+      res = RsConfig::ICON_STATE_ACTIF
+    when "login"
+      res = RsConfig::ICON_STATE_LOGIN
+    when "connection"
+      res = RsConfig::ICON_STATE_CONNECTION
+    when "away"
+      res = RsConfig::ICON_STATE_AWAY
+    when "idle"
+      res = RsConfig::ICON_STATE_IDLE
+    when "busy"
+      res = RsConfig::ICON_STATE_BUSY
+    when "lock"
+      res = RsConfig::ICON_STATE_LOCK
+    when "server"
+      res = RsConfig::ICON_STATE_SERVER
+    when "logout"
+      res = RsConfig::ICON_STATE_LOGOUT
+    else
+      res = RsConfig::ICON_STATE_DISCONNECT
+    end
+    return res
+  end
   #--- | Contacts window
   def on_contact_delete_event(widget, event)
     @contact_win.hide_all()
   end
   def on_contact_add_entry_activate(widget)
     on_contact_add_btn_clicked(widget)
-    rsng_user_view_update()
   end
   def on_contact_add_btn_clicked(widget)
     if @contact_add_entry.text.length > 0
-      @rs_contact.add(@contact_add_entry.text, true)
+      login = @contact_add_entry.text
+      @rs_contact.add(login, true)
       @contact_add_entry.text = ""
+      @rs_contact.get_users_photo()
+      h = @user_model.append(nil)
+      h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+      h.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+      if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+      else
+        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+      end
+      h.set_value(3, login.to_s)
+      h.set_value(4, "num_session")
+      h.set_value(5, "state")
+      h.set_value(6, "user_data")
+      h.set_value(7, "location")
       #--- | TODO: If connected send whatch_log and who commands to netsoul server
+      if @ns.connected
+        @ns.sock_send( NetSoul::Message::who_users(@rs_contact.get_users_list()) )
+        @ns.sock_send( NetSoul::Message::watch_users(@rs_contact.get_users_list()) )
+      end
     else
       RsInfobox.new(@contact_win, "No must specify the login", "warning")
     end

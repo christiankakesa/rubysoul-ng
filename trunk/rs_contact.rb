@@ -25,6 +25,9 @@ class RsContact
     get_users_photo()
   end
 
+  def load_contacts
+    @contacts = YAML::load_file(RsConfig::CONTACTS_FILENAME)
+  end
   #--- Add login to the YML contact file.
   def add(login, save_it = false)
     if not (@contacts.include?(login.to_sym))
