@@ -41,11 +41,15 @@ class RsConfig
   ICON_CONNECT = "#{THEME_DIR+File::SEPARATOR}Connect.png"
   ICON_MULTICONNECT = "#{THEME_DIR+File::SEPARATOR}Multiconnect.png"
   ICON_DISCONNECT = "#{THEME_DIR+File::SEPARATOR}Disconnect.png"
-  ICON_STATE_ACTIVE = "#{THEME_DIR+File::SEPARATOR}StateOnline.png"
+  ICON_STATE_ACTIF = "#{THEME_DIR+File::SEPARATOR}StateActif.png"
+  ICON_STATE_LOGIN = "#{THEME_DIR+File::SEPARATOR}StateLogin.png"
+  ICON_STATE_CONNECTION = "#{THEME_DIR+File::SEPARATOR}StateConnection.png"
   ICON_STATE_AWAY = "#{THEME_DIR+File::SEPARATOR}StateAway.png"
   ICON_STATE_IDLE = "#{THEME_DIR+File::SEPARATOR}StateIdle.png"
+  ICON_STATE_BUSY = "#{THEME_DIR+File::SEPARATOR}StateBusy.png"
   ICON_STATE_LOCK = "#{THEME_DIR+File::SEPARATOR}StateLock.png"
   ICON_STATE_SERVER = "#{THEME_DIR+File::SEPARATOR}StateServer.png"
+  ICON_STATE_LOGOUT = "#{THEME_DIR+File::SEPARATOR}StateLogout.png"
   ICON_STATE_DISCONNECT = "#{THEME_DIR+File::SEPARATOR}StateDisconnect.png"
 
   attr_accessor :conf

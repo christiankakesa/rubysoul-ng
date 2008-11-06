@@ -52,7 +52,7 @@ module NetSoul
   end
 
   def self.set_state(state, timestamp)
-    return 'user_cmd state %s:%s'%[state, timestamp]
+    return 'user_cmd state %s:%s'%[state.to_s, timestamp.to_s]
   end
 
   def self.set_user_data(data)
@@ -63,8 +63,8 @@ module NetSoul
     return "ping 42"
   end
 
-  def self.deconnexion
-    return "deconnexion"
+  def self.ns_exit
+    return "exit"
   end
 
   def self.escape(str)

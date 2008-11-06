@@ -66,7 +66,7 @@ module NetSoul
       if (sock_get().split(' ')[1] == "002")
         @authentificated = true
         sock_send("user_cmd attach")
-        Message.set_state(@rs_config.conf[:state], get_server_timestamp())
+        sock_send( Message.set_state(@rs_config.conf[:state], get_server_timestamp()) )
       else
         return false
       end
@@ -74,7 +74,7 @@ module NetSoul
     end
 
     def disconnect
-      sock_send(Message.deconnexion())
+      sock_send(Message.ns_exit())
       @authenticated = false
       sock_close
       @connected = false
