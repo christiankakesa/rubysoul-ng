@@ -306,19 +306,13 @@ class RubySoulNG
       h.set_value(8, "user_agent")
     end
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
-      if (	view.model.get_iter(path)[5].to_s.eql?("actif") or
-      		view.model.get_iter(path)[5].to_s.eql?("away")	or
-      		view.model.get_iter(path)[5].to_s.eql?("busy")  or
-      		view.model.get_iter(path)[5].to_s.eql?("idle")  or
-      		view.model.get_iter(path)[5].to_s.eql?("lock")
-      	  )
+      if (	view.model.get_iter(path)[5].to_s.eql?("actif") or view.model.get_iter(path)[5].to_s.eql?("away") or view.model.get_iter(path)[5].to_s.eql?("busy") or view.model.get_iter(path)[5].to_s.eql?("idle") or view.model.get_iter(path)[5].to_s.eql?("lock")	)
         login = view.model.get_iter(path)[3]
         num_session = view.model.get_iter(path)[4]
         state = view.model.get_iter(path)[5]
         user_data = view.model.get_iter(path)[6]
         if not @user_dialogs.include?(login.to_sym)
           @user_dialogs[login.to_sym] = RsDialog.new(login, num_session)
-          @user_dialogs[login.to_sym].set_can_focus(true)
           @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
             @user_dialogs[login.to_sym].hide_all()
           end
@@ -346,7 +340,6 @@ class RubySoulNG
         iter.set_value(6, "user_data")
         iter.set_value(7, "location")
         iter.set_value(8, "user_agent")
-      # elsif @rs_contact.contacts[login.to_sym][:connections].length == 1
       elsif val[:connections].length == 1
         val[:connections].each do |ke, va|
 		    iter = @user_model.append(nil)

@@ -48,7 +48,7 @@ class RsContact
   def save
     c = Hash.new
     @contacts.each do |k, v|
-      c[k.to_sym] = nil
+      c[k.to_sym] = Hash.new
     end
     File.open(RsConfig::CONTACTS_FILENAME, "wb") do |file|
       file.puts '#--- ! RubySoulNG contacts file'
