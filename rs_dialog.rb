@@ -51,17 +51,20 @@ class RsDialog < Gtk::Window
       case event.keyval
       when Gdk::Keyval::GDK_Return, Gdk::Keyval::GDK_KP_Enter, Gdk::Keyval::GDK_3270_Enter, Gdk::Keyval::GDK_ISO_Enter
         send_msg(@login, @send_buffer.text)
+        @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.page_size
         @send_view_tv.set_focus(true)
       end
+      #widget.set_focus_child(@send_view_tv)
     end
-
   end
 
   def send_msg(user, msg)
-    @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
+    if NetSoul::Message::trim(msg.to_s).length > 0
+      @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
+      @dialog_buffer.text += "(#{Time.now.strftime("%H:%M:%S")}) #{user.to_s}:"
+      @dialog_buffer.text += " #{msg.to_s}\n"
+    end
     @send_buffer.delete(@send_buffer.start_iter, @send_buffer.end_iter)
-    @dialog_buffer.text += "(#{Time.now.strftime("%H:%M:%S")}) #{user.to_s}:"
-    @dialog_buffer.text += " #{msg.to_s}\n"
   end
 
   def receive_msg(user_from, msg)
