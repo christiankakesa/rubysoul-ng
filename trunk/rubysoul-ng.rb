@@ -198,10 +198,9 @@ class RubySoulNG
           @user_dialogs[login.to_sym].hide_all()
         end
       end
-      @user_dialogs.receive_msg(login, msg)
-      @user_dialogs.has_focus(true)
+      @user_dialogs[login.to_sym].receive_msg(login, msg)
       @user_dialogs[login.to_sym].show_all()
-      puts "[msg] : " + sender + " - " + sub_cmd + " - " + msg
+      #puts "[msg] : " + sender + " - " + sub_cmd + " - " + msg
       return true
     when "who"
       if not response.match(/cmd end$/)
@@ -228,7 +227,7 @@ class RubySoulNG
       else
         rsng_user_view_update()
       end
-      puts "[who] : " + sender + " - " + sub_cmd + " - " + response
+      #puts "[who] : " + sender + " - " + sub_cmd + " - " + response
       return true
     when "state"
       puts "[state] : " + sender + " - " + sub_cmd + " - " + msg
@@ -361,11 +360,6 @@ class RubySoulNG
         iter = @user_model.append(nil)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
         iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
-        #if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
-        #  iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
-        #else
-        #  iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
-        #end
         iter.set_value(2, nil)
         iter.set_value(3, login.to_s)
         iter.set_value(4, "num_session")
