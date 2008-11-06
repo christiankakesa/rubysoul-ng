@@ -381,8 +381,12 @@ class RubySoulNG
         iter = @user_model.append(nil)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
         iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
-        iter.set_value(2, nil)
-        iter.set_value(3, login.to_s)
+        if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+		    else
+		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+		    end
+		    iter.set_value(3, login.to_s)
         iter.set_value(4, "num_session")
         iter.set_value(5, "status")
         iter.set_value(6, "user_data")
@@ -391,13 +395,14 @@ class RubySoulNG
 		val[:connections].each do |k, v|
 		    it = @user_model.append(iter)
 		    it.set_value(0, Gdk::Pixbuf.new(get_status_icon(v[:status]), 24, 24))
-		    it.set_value(1, %Q[<span weight="bold" size="large">#{v[:user_agent].to_s}</span>])
-		    if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
-		      it.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
-		    else
-		      it.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+		    limit_user_agent = 20 
+		    my_user_agent = v[:user_agent].to_s.slice(0, limit_user_agent.to_i)
+		    if v[:user_agent].to_s.length > limit_user_agent.to_i
+		      my_user_agent += "..."
 		    end
-		    it.set_value(3, login.to_s)
+		    it.set_value(1, %Q[<span weight="bold" size="large">#{my_user_agent.to_s}</span>])
+		    it.set_value(2, nil)
+            it.set_value(3, login.to_s)
 		    it.set_value(4, k.to_s)
 		    it.set_value(5, v[:status])
 		    it.set_value(6, v[:user_data])
