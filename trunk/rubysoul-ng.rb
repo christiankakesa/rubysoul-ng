@@ -44,6 +44,9 @@ class RubySoulNG
     @contact_add_btn = @glade['contact_add_btn']
     @preferences_win = @glade['preferences']
     @preferences_nbook = @glade['prefs']
+    @account_login_entry = @glade['account_login_entry']
+    @account_socks_password_entry = @glade['account_socks_password_entry']
+    @account_unix_password_entry = @glade['account_unix_password_entry']
     @aboutdialog = @glade['aboutdialog']
     @user_dialogs = Hash.new
 
@@ -53,14 +56,32 @@ class RubySoulNG
     rsng_user_view_init()
     rsng_state_box_init()
     preferences_account_init()
+    preferences_account_load_config(@rs_config.conf)
 
     @ns = NetSoul::NetSoul::instance()
     if @rs_config.conf[:connection_at_startup]
       connection()
     end
+    @parse_thread = nil
   end
 
   def connection
+    if @rs_config.conf[:login].to_s.length == 0
+      @preferences_win.show_all()
+      @preferences_nbook.set_page(0)
+      @preferences_win.set_focus(@account_login_entry)
+      return
+    elsif @rs_config.conf[:socks_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?("md5")
+      @preferences_win.show_all()
+      @preferences_nbook.set_page(0)
+      @preferences_win.set_focus(@account_socks_password_entry)
+      return
+    elsif @rs_config.conf[:unix_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?("krb5")
+      @preferences_win.show_all()
+      @preferences_nbook.set_page(0)
+      @preferences_win.set_focus(@account_unix_password_entry)
+      return
+    end
     if @ns.connect()
       @rsng_user_view.set_sensitive(true)
       rsng_state_box_update()
@@ -77,7 +98,7 @@ class RubySoulNG
   end
   def disconnection
     @ns.disconnect()
-    @parse_thread.kill!
+    @parse_thread.kill! if @parse_thread.is_a?(Thread)
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
     @user_model.clear()
