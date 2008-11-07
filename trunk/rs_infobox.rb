@@ -10,7 +10,7 @@ rescue LoadError
 end
 
 class RsInfobox
-  def initialize(main_app_window, message, type = "info")
+  def initialize(main_app_window, message, type = "info", modal = true)
     info_type = Gtk::MessageDialog::OTHER
     info_button = Gtk::MessageDialog::BUTTONS_CLOSE
     case type.to_s
@@ -26,7 +26,11 @@ class RsInfobox
       info_type = Gtk::MessageDialog::WARNING
       info_button = Gtk::MessageDialog::BUTTONS_OK
     end
-    infobox = Gtk::MessageDialog.new(main_app_window, Gtk::Dialog::MODAL, info_type, info_button, message.to_s)
+    if modal
+      infobox = Gtk::MessageDialog.new(main_app_window, Gtk::Dialog::MODAL, info_type, info_button, message.to_s)
+    else
+      infobox = Gtk::MessageDialog.new(main_app_window, Gtk::Dialog::DESTROY_WITH_PARENT, info_type, info_button, message.to_s)
+    end
     infobox.run()
     infobox.destroy()
   end
