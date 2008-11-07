@@ -15,21 +15,22 @@ end
 module NetSoul
   class NetSoul
     include Singleton
-    
+
     attr_accessor :sock
-    attr_reader :config, :connection_values, :connected, :authentificated
+    attr_reader :config, :connection_values, :connected, :authenticated
 
     def initialize
       @rs_config = RsConfig::instance()
       @connection_values = Hash.new
       @sock = nil
       @connected = false
-      @authentificated = false
+      @authenticated = false
     end
 
     def connect
+      @sock = nil
       @sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-      if (!@sock)
+      if (@sock.closed?)
         return false
       end
       buf = sock_get
@@ -64,7 +65,7 @@ module NetSoul
       end
 
       if (sock_get().split(' ')[1] == "002")
-        @authentificated = true
+        @authenticated = true
         sock_send("user_cmd attach")
         sock_send( Message.set_state(@rs_config.conf[:state], get_server_timestamp()) )
       else
@@ -81,22 +82,29 @@ module NetSoul
     end
 
     def sock_send(string)
-      if (@sock)
+      if (!@sock.closed? && string.to_s.length > 0)
         @sock.puts string
+      else
+        @authenticated = false
+        @connected = false
       end
     end
 
     def sock_get
-      if (@sock)
-        response = @sock.gets.to_s.chomp
+      if (!@sock.closed?)
+        response = @sock.gets
+        response = response.to_s.chomp if response
         return response
+      else
+        @authenticated = false
+        @connected = false
+        return ""
       end
     end
 
     def sock_close
-      if (@sock)
-        @sock.close
-        @sock = nil
+      if (!@sock.closed?)
+        @sock.close()
       end
     end
 

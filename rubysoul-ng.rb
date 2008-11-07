@@ -62,7 +62,6 @@ class RubySoulNG
     if @rs_config.conf[:connection_at_startup]
       connection()
     end
-    @parse_thread = nil
   end
 
   def connection
@@ -70,35 +69,39 @@ class RubySoulNG
       @preferences_win.show_all()
       @preferences_nbook.set_page(0)
       @preferences_win.set_focus(@account_login_entry)
-      return
+      return false
     elsif @rs_config.conf[:socks_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?("md5")
       @preferences_win.show_all()
       @preferences_nbook.set_page(0)
       @preferences_win.set_focus(@account_socks_password_entry)
-      return
+      return false
     elsif @rs_config.conf[:unix_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?("krb5")
       @preferences_win.show_all()
       @preferences_nbook.set_page(0)
       @preferences_win.set_focus(@account_unix_password_entry)
-      return
+      return false
     end
     if @ns.connect()
-      @rsng_user_view.set_sensitive(true)
-      rsng_state_box_update()
-      @parse_thread = Thread.new do
-        while (@ns.connected) do
-          parse_cmd()
-        end
-      end
-      @ns.sock_send( NetSoul::Message::who_users(@rs_contact.get_users_list()) )
-      @ns.sock_send( NetSoul::Message::watch_users(@rs_contact.get_users_list()) )
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
+      @rsng_user_view.set_sensitive(true)
+      @parse_thread = Thread.new do
+        loop do
+          parse_cmd() if @ns.connected
+        end
+      end
+      rsng_state_box_update()
+      @ns.sock_send( NetSoul::Message::who_users(@rs_contact.get_users_list()) )
+      @ns.sock_send( NetSoul::Message::watch_users(@rs_contact.get_users_list()) )
+      return true
+    else
+      RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server", "warning", false)
+      return false
     end
   end
   def disconnection
     @ns.disconnect()
-    @parse_thread.kill! if @parse_thread.is_a?(Thread)
+    @parse_thread.kill!
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
     @user_model.clear()
@@ -124,7 +127,14 @@ class RubySoulNG
   end
 
   def parse_cmd
-    buff = @ns.sock_get()
+    begin
+      buff = @ns.sock_get().to_s
+    rescue
+      disconnection()
+    end
+    if not (buff.length > 0)
+      return
+    end
     case buff.split(' ')[0]
     when "ping"
       ping()
@@ -134,6 +144,14 @@ class RubySoulNG
       user_cmd(buff)
     else
       puts "Unknown command " + buff
+    end
+  end
+
+  def send_cmd(msg)
+    begin
+      @ns.sock_send(msg)
+    rescue
+      disconnection()
     end
   end
 
@@ -150,6 +168,7 @@ class RubySoulNG
     when "002"
       #Nothing to do, all is right
       #puts '[REP_OK] %s:%s'%[msg_num.to_s, msg]
+      return true
     when "003"
       #bad number of arguments
     when "033"
@@ -160,9 +179,9 @@ class RubySoulNG
     else
       #puts "Something is wrong in \"REP\" command response..."
       puts '[Response not Yet implemented] %s'%[cmd.to_s]
-      return false
     end
-    return true
+    disconnection()
+    return false
   end
 
   def user_cmd(usercmd)
@@ -173,12 +192,12 @@ class RubySoulNG
     when "mail"
       sender, subject = response.split(' ')[2..3]
       msg = "Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2]
-      RsInfobox.new(self, msg)
+      RsInfobox.new(self, msg, "info", false)
       return true
     when "host"
       sender = response.split(' ')[2]
       msg = "Appel en en cours... !!!\nDe: " + URI.unescape(sender)[1..-1]
-      RsInfobox.new(self, msg)
+      RsInfobox.new(self, msg, "info", false)
       return true
     when "user"
       get_user_response(cmd, user, response)
@@ -196,19 +215,15 @@ class RubySoulNG
     when "dotnetSoul_UserTyping"
       #| dotnetSoul_UserTyping null dst=kakesa_c
       puts "[dotnetSoul_UserTyping] : " + sender + " - " + sub_cmd + " - " + response
-      return true
     when "typing_start"
       #| dotnetSoul_UserTyping null dst=kakesa_c
       puts "[typing_start] : " + sender + " - " + sub_cmd + " - " + response
-      return true
     when "dotnetSoul_UserCancelledTyping"
       #| dotnetSoul_UserCancelledTyping null dst=kakesa_c
       puts "[dotnetSoul_UserCancelledTyping] : " + sender + " - " + sub_cmd + " - " + response
-      return true
     when "typing_end"
       #| dotnetSoul_UserCancelledTyping null dst=kakesa_c
       puts "[typing_end] : " + sender + " - " + sub_cmd + " - " + response
-      return true
     when "msg"
       msg = URI.unescape(response.split(' ')[1])
       socket = response.split(' ')[1]
@@ -222,7 +237,6 @@ class RubySoulNG
       @user_dialogs[login.to_sym].receive_msg(login, msg)
       @user_dialogs[login.to_sym].show_all()
       #puts "[msg] : " + sender + " - " + sub_cmd + " - " + msg
-      return true
     when "who"
       if not response.match(/cmd end$/)
         socket = response.split(' ')[1]
@@ -249,20 +263,17 @@ class RubySoulNG
         rsng_user_view_update()
       end
       #puts "[who] : " + sender + " - " + sub_cmd + " - " + response
-      return true
     when "state"
       puts "[state] : " + sender + " - " + sub_cmd + " - " + msg
-      return true
     when "login"
       puts "[login] : " + sender + " - " + sub_cmd + " - " + msg
-      return true
     when "logout"
       puts "[logout] : " + sender + " - " + sub_cmd + " - " + msg
-      return true
     else
       puts "[unknown sub command] : " + sender + " - " + sub_cmd + " - " + msg
       return false
     end
+    return true
   end
   #--- | Main window
   def on_RubySoulNG_delete_event(widget, event)
@@ -271,10 +282,14 @@ class RubySoulNG
   end
 
   def on_tb_connect_clicked(widget)
-    if @ns.connected
-      disconnection()
-    else
-      connection()
+    begin
+      if @ns.authenticated
+        disconnection()
+      else
+        connection()
+      end
+    rescue
+      RsInfobox.new(@rsng_win, "#{$!}", "warning", false)
     end
   end
   def on_tb_contact_clicked(widget)
@@ -362,52 +377,52 @@ class RubySoulNG
         iter.set_value(8, "user_agent")
       elsif val[:connections].length == 1
         val[:connections].each do |ke, va|
-		    iter = @user_model.append(nil)
-		    iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(va[:status]), 24, 24))
-		    iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
-		    if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
-		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
-		    else
-		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
-		    end
-		    iter.set_value(3, login.to_s)
-		    iter.set_value(4, ke.to_s)
-		    iter.set_value(5, va[:status])
-		    iter.set_value(6, va[:user_data])
-		    iter.set_value(7, va[:location])
-		    iter.set_value(8, va[:user_agent])
+          iter = @user_model.append(nil)
+          iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(va[:status]), 24, 24))
+          iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+          if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+            iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+          else
+            iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+          end
+          iter.set_value(3, login.to_s)
+          iter.set_value(4, ke.to_s)
+          iter.set_value(5, va[:status])
+          iter.set_value(6, va[:user_data])
+          iter.set_value(7, va[:location])
+          iter.set_value(8, va[:user_agent])
         end
       elsif val[:connections].length > 1
         iter = @user_model.append(nil)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
         iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
         if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
-		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
-		    else
-		      iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
-		    end
-		    iter.set_value(3, login.to_s)
+          iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+        else
+          iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+        end
+        iter.set_value(3, login.to_s)
         iter.set_value(4, "num_session")
         iter.set_value(5, "status")
         iter.set_value(6, "user_data")
         iter.set_value(7, "location")
         iter.set_value(8, "user_agent")
-		val[:connections].each do |k, v|
-		    it = @user_model.append(iter)
-		    it.set_value(0, Gdk::Pixbuf.new(get_status_icon(v[:status]), 24, 24))
-		    limit_user_agent = 20 
-		    my_user_agent = v[:user_agent].to_s.slice(0, limit_user_agent.to_i)
-		    if v[:user_agent].to_s.length > limit_user_agent.to_i
-		      my_user_agent += "..."
-		    end
-		    it.set_value(1, %Q[<span weight="bold" size="large">#{my_user_agent.to_s}</span>])
-		    it.set_value(2, nil)
-            it.set_value(3, login.to_s)
-		    it.set_value(4, k.to_s)
-		    it.set_value(5, v[:status])
-		    it.set_value(6, v[:user_data])
-		    it.set_value(7, v[:location])
-		    it.set_value(8, v[:user_agent])
+        val[:connections].each do |k, v|
+          it = @user_model.append(iter)
+          it.set_value(0, Gdk::Pixbuf.new(get_status_icon(v[:status]), 24, 24))
+          limit_user_agent = 20
+          my_user_agent = v[:user_agent].to_s.slice(0, limit_user_agent.to_i)
+          if v[:user_agent].to_s.length > limit_user_agent.to_i
+            my_user_agent += "..."
+          end
+          it.set_value(1, %Q[<span weight="bold" size="large">#{my_user_agent.to_s}</span>])
+          it.set_value(2, nil)
+          it.set_value(3, login.to_s)
+          it.set_value(4, k.to_s)
+          it.set_value(5, v[:status])
+          it.set_value(6, v[:user_data])
+          it.set_value(7, v[:location])
+          it.set_value(8, v[:user_agent])
         end
       end
     end
@@ -433,7 +448,7 @@ class RubySoulNG
     end
     @rsng_state_box.set_sensitive(false)
     @rsng_state_box.signal_connect("changed") do
-      if (@ns.connected)
+      if (@ns.authenticated)
         @ns.sock_send(NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp))
         @rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
         @rs_config.save()
@@ -441,7 +456,7 @@ class RubySoulNG
     end
   end
   def rsng_state_box_update
-    if (@ns.connected)
+    if (@ns.authenticated)
       @rsng_state_box.set_sensitive(true)
       case @rs_config.conf[:state]
       when "actif"
@@ -513,8 +528,8 @@ class RubySoulNG
       h.set_value(5, "state")
       h.set_value(6, "user_data")
       h.set_value(7, "location")
-      #--- | TODO: If connected send whatch_log and who commands to netsoul server
-      if @ns.connected
+      h.set_value(8, "user_agent")
+      if @ns.authenticated
         @ns.sock_send( NetSoul::Message::who_users(@rs_contact.get_users_list()) )
         @ns.sock_send( NetSoul::Message::watch_users(@rs_contact.get_users_list()) )
       end
