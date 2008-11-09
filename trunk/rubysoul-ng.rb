@@ -134,7 +134,7 @@ class RubySoulNG
     if not (buff.length > 0)
       return
     end
-    puts buff.to_s
+    # puts buff.to_s
     case buff.split(' ')[0]
     when "ping"
       ping()
