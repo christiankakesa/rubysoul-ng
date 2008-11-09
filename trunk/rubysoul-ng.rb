@@ -134,7 +134,7 @@ class RubySoulNG
     if not (buff.length > 0)
       return
     end
-    # puts buff.to_s
+    #puts buff.to_s
     case buff.split(' ')[0]
     when "ping"
       ping()
@@ -544,8 +544,10 @@ class RubySoulNG
     @rsng_user_view_menu_delete.signal_connect("activate") do |widget, event|
       iter = @rsng_user_view.selection.selected
       if iter
-        login = iter[3]
-        @user_model.remove(iter) && @rs_contact.remove(login.to_s, true)
+        if iter[8].to_s != "children"
+          login = iter[3]
+          @user_model.remove(iter) && @rs_contact.remove(login.to_s, true)
+        end
       end
     end
     @rsng_user_view_menu = Gtk::Menu.new
@@ -555,7 +557,7 @@ class RubySoulNG
         if (event.button.to_i == 3)
           path, column, x, y = @rsng_user_view.get_path_at_pos(event.x, event.y)
             iter = @user_model.get_iter(path)
-            if (iter.get_value(8) != "children")
+            if (iter[8].to_s != "children")
               @rsng_user_view_menu.popup(nil, nil, event.button, event.time) do |menu, x, y, push_in|
                 [x, y, push_in]
               end
