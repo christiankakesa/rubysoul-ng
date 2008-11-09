@@ -16,14 +16,13 @@ module NetSoul
   class NetSoul
     include Singleton
 
-    attr_accessor :sock
-    attr_reader :config, :connection_values, :connected, :authenticated
+    # attr_accessor :sock
+    attr_reader :connection_values, :authenticated
 
     def initialize
       @rs_config = RsConfig::instance()
       @connection_values = Hash.new
       @sock = nil
-      @connected = false
       @authenticated = false
     end
 
@@ -51,10 +50,10 @@ module NetSoul
     end
 
     def auth
+      @authenticated = false
       sock_send("auth_ag ext_user none -")
-      if (sock_get().split(' ')[1] == "002")
-        @connected = true
-      else
+      rep = sock_get()
+      if not (rep.split(' ')[1] == "002")
         return false
       end
 
@@ -64,42 +63,38 @@ module NetSoul
         sock_send(Message.standard_authentication(@connection_values))
       end
 
-      if (sock_get().split(' ')[1] == "002")
-        @authenticated = true
-        sock_send("user_cmd attach")
-        sock_send( Message.set_state(@rs_config.conf[:state], get_server_timestamp()) )
-      else
+      rep = sock_get()
+      if not (rep.split(' ')[1] == "002")
         return false
       end
-      return true
+      @authenticated = true
+      sock_send("user_cmd attach")
+      sock_send( Message.set_state(@rs_config.conf[:state], get_server_timestamp()) )
+      return @authenticated
     end
 
     def disconnect
       sock_send(Message.ns_exit())
+      sock_close()
       @authenticated = false
-      sock_close
-      @connected = false
     end
 
     def sock_send(string)
       if (!@sock.closed? && string.to_s.length > 0)
         @sock.puts string
       else
+        sock_close()
         @authenticated = false
-        @connected = false
       end
     end
 
     def sock_get
       if (!@sock.closed?)
         response = @sock.gets
-        response = response.to_s.chomp if response
+        response = response.to_s.chomp
         return response
-      else
-        @authenticated = false
-        @connected = false
-        return ""
       end
+      return ""
     end
 
     def sock_close
