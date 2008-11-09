@@ -38,9 +38,7 @@ class RsContact
 
   #--- Remove contact to the YML file.
   def remove(login, save_it = false)
-    @contacts = @contacts.delete_if do |key, value|
-      key.eql?(login.to_sym)
-    end
+    @contacts.delete(login.to_s.to_sym)
     save() if save_it
   end
 
@@ -48,7 +46,7 @@ class RsContact
   def save
     c = Hash.new
     @contacts.each do |k, v|
-      c[k.to_sym] = Hash.new
+      c[k.to_s.to_sym] = Hash.new
     end
     File.open(RsConfig::CONTACTS_FILENAME, "wb") do |file|
       file.puts '#--- ! RubySoulNG contacts file'

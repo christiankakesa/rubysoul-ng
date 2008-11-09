@@ -31,6 +31,8 @@ class RsDialog < Gtk::Window
     @dialog_view = Gtk::ScrolledWindow.new().add(@dialog_view_tv)
     @dialog_view.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC)
     @dialog_view.set_size_request(400, 200)
+    @dialog_view.vadjustment.set_step_increment(10.0)
+    @dialog_view.vadjustment.set_page_increment(100.0)
     @send_buffer = Gtk::TextBuffer.new
     @send_view_tv = Gtk::TextView.new(@send_buffer)
     @send_view_tv.set_wrap_mode(Gtk::TextTag::WRAP_WORD_CHAR)
@@ -48,11 +50,18 @@ class RsDialog < Gtk::Window
       widget.hide_all()
     end
     signal_connect("key-press-event") do |widget, event|
-      case event.keyval
-      when Gdk::Keyval::GDK_Return, Gdk::Keyval::GDK_KP_Enter, Gdk::Keyval::GDK_3270_Enter, Gdk::Keyval::GDK_ISO_Enter
-        send_msg(@login, @send_buffer.text)
-        @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.page_size
-        @send_view_tv.set_focus(true)
+      if event.state & Gdk::Window::ModifierType::CONTROL_MASK != 0 and event.keyval == Gdk::Keyval::GDK_l
+        @dialog_buffer.delete(@dialog_buffer.start_iter, @dialog_buffer.end_iter)
+        set_focus_child(@send_view_tv)
+      else
+        case event.keyval
+        when Gdk::Keyval::GDK_Return, Gdk::Keyval::GDK_KP_Enter, Gdk::Keyval::GDK_3270_Enter, Gdk::Keyval::GDK_ISO_Enter
+          if @send_buffer.text.length> 0
+            send_msg(@login, @send_buffer.text)
+            @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
+          end
+          set_focus_child(@send_view_tv)
+        end
       end
       #widget.set_focus_child(@send_view_tv)
     end
