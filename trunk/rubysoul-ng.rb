@@ -9,6 +9,7 @@ $KCODE = 'u'
 
 begin
   require 'libglade2'
+  require 'thread'
   require 'lib/netsoul'
   require 'rs_config'
   require 'rs_contact'
@@ -53,6 +54,8 @@ class RubySoulNG
     @rs_config = RsConfig::instance()
     @rs_contact = RsContact::instance()
 
+    @mutex_send_msg = Mutex.new
+
     rsng_user_view_init()
     rsng_state_box_init()
     preferences_account_init()
@@ -87,12 +90,12 @@ class RubySoulNG
       @rsng_user_view.set_sensitive(true)
       @parse_thread = Thread.new do
         loop do
-          parse_cmd() if @ns.connected
+          parse_cmd() if @ns.authenticated
         end
       end
       rsng_state_box_update()
-      @ns.sock_send( NetSoul::Message::who_users(@rs_contact.get_users_list()) )
-      @ns.sock_send( NetSoul::Message::watch_users(@rs_contact.get_users_list()) )
+      send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+      send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
       return true
     else
       RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server", "warning", false)
@@ -130,11 +133,12 @@ class RubySoulNG
       buff = @ns.sock_get().to_s
     rescue
       disconnection()
+      return
     end
     if not (buff.length > 0)
       return
     end
-    #puts buff.to_s
+    puts buff.to_s
     case buff.split(' ')[0]
     when "ping"
       ping()
@@ -172,10 +176,15 @@ class RubySoulNG
             end
             if @rs_contact.contacts[login.to_sym][:connections].length == 1
               iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+              if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+                iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+              else
+                iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+              end
             else
               iter.set_value(1, %Q[<span weight="normal" size="x-small"> - #{my_location.to_s} on #{user_data.to_s.slice(0, 23)}</span>])
+              iter.set_value(2, nil)
             end
-            iter.set_value(2, nil)
             iter.set_value(3, login.to_s)
             iter.set_value(4, socket.to_s)
             iter.set_value(5, status.to_s)
@@ -190,15 +199,13 @@ class RubySoulNG
   end
 
   def send_cmd(msg)
-    begin
+    @mutex_send_msg.synchronize do
       @ns.sock_send(msg)
-    rescue
-      disconnection()
     end
   end
 
   def ping
-    @ns.sock_send(NetSoul::Message::ping())
+    send_cmd(NetSoul::Message.ping())
     return true
   end
 
@@ -219,17 +226,17 @@ class RubySoulNG
     when "140"
       RsInfobox.new(self, "User identification failed", "warning")
     else
-      #puts "Something is wrong in \"REP\" command response..."
-      #puts '[Response not Yet implemented] %s'%[cmd.to_s]
+      # puts "Something is wrong in \"REP\" command response..."
+      # puts '[Response not Yet implemented] %s'%[cmd.to_s]
     end
     disconnection()
     return false
   end
 
   def user_cmd(usercmd)
-    cmd, user	= NetSoul::Message::trim(usercmd.split('|')[0]).split(' ')
-    response	= NetSoul::Message::trim(usercmd.split('|')[1])
-    sub_cmd	= NetSoul::Message::trim(user.split(':')[1])
+    cmd, user	= NetSoul::Message.trim(usercmd.split('|')[0]).split(' ')
+    response	= NetSoul::Message.trim(usercmd.split('|')[1])
+    sub_cmd	= NetSoul::Message.trim(user.split(':')[1])
     case sub_cmd.to_s
     when "mail"
       sender, subject = response.split(' ')[2..3]
@@ -264,7 +271,7 @@ class RubySoulNG
       msg = URI.unescape(response.split(' ')[1])
       socket = response.split(' ')[1]
       login = sender.to_s
-      
+
       if not @user_dialogs.include?(login.to_sym)
         @user_dialogs[login.to_sym] = RsDialog.new(login.to_s, socket)
         @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
@@ -299,7 +306,7 @@ class RubySoulNG
       end
       #puts "[who] : " + sender + " - " + sub_cmd + " - " + response
     when "state"
-      #@ns.sock_send( NetSoul::Message::list_users(login.to_s) ) # update user_data, location
+      #send_cmd( NetSoul::Message.list_users(login.to_s) ) # update user_data, location
       socket = user.split(':')[0].to_s
       @user_model.each do |model,path,iter|
         if (iter[4].to_s == socket.to_s)
@@ -402,31 +409,31 @@ class RubySoulNG
           end
         end
       end
-      @ns.sock_send( NetSoul::Message::list_users(login.to_s) )
+      send_cmd( NetSoul::Message.list_users(login.to_s) )
       #puts "[login] : " + sender + " - " + sub_cmd
     when "logout"
       login = sender.to_s
       socket = user.split(':')[0]
       if @rs_contact.contacts.include?(login.to_sym) && @rs_contact.contacts[login.to_sym].include?(:connections) && @rs_contact.contacts[login.to_sym][:connections].include?(socket.to_i)
         @rs_contact.contacts[login.to_sym][:connections].delete(socket.to_i)
-        if @rs_contact.contacts[login.to_sym][:connections].length == 0
+        if @rs_contact.contacts[login.to_sym][:connections].length == 0 # delete and put at bottom
           @user_model.each do |model,path,iter|
-            if (iter[3].to_s == login.to_s)
-              iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-              iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
-              if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
-                iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
-              else
-                iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
-              end
-              iter.set_value(3, login.to_s)
-              iter.set_value(4, "num_session")
-              iter.set_value(5, "status")
-              iter.set_value(6, "user_data")
-              iter.set_value(7, "location")
-            end
+            @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
-        elsif @rs_contact.contacts[login.to_sym][:connections].length == 1
+          iter = @user_model.append(nil)
+          iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+          iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+          if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
+            iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
+          else
+            iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+          end
+          iter.set_value(3, login.to_s)
+          iter.set_value(4, "num_session")
+          iter.set_value(5, "status")
+          iter.set_value(6, "user_data")
+          iter.set_value(7, "location")
+        elsif @rs_contact.contacts[login.to_sym][:connections].length == 1 # last sub element need to be root element
           @user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
@@ -448,7 +455,7 @@ class RubySoulNG
             iter.set_value(6, val[:user_data].to_s)
             iter.set_value(7, val[:location].to_s)
           end
-        elsif @rs_contact.contacts[login.to_sym][:connections].length > 1
+        elsif @rs_contact.contacts[login.to_sym][:connections].length >= 2 # just delete thirdth or more element
           @user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
@@ -463,8 +470,12 @@ class RubySoulNG
   end
   #--- | Main window
   def on_RubySoulNG_delete_event(widget, event)
-    disconnection()
-    Gtk.main_quit()
+    begin
+      disconnection()
+    rescue
+    ensure
+      Gtk.main_quit()
+    end
   end
 
   def on_tb_connect_clicked(widget)
@@ -556,15 +567,15 @@ class RubySoulNG
       if event.kind_of? Gdk::EventButton
         if (event.button.to_i == 3)
           path, column, x, y = @rsng_user_view.get_path_at_pos(event.x, event.y)
-            iter = @user_model.get_iter(path)
-            if (iter[8].to_s != "children")
-              @rsng_user_view_menu.popup(nil, nil, event.button, event.time) do |menu, x, y, push_in|
-                [x, y, push_in]
-              end
-              @rsng_user_view_menu.show_all()
+          iter = @user_model.get_iter(path)
+          if (iter[8].to_s != "children" && iter == @rsng_user_view.selection.selected)
+            @rsng_user_view_menu.popup(nil, nil, event.button, event.time) do |menu, x, y, push_in|
+              [x, y, push_in]
             end
-		end
-	  end
+            @rsng_user_view_menu.show_all()
+          end
+        end
+      end
     end
   end
   def rsng_user_view_update
@@ -657,7 +668,7 @@ class RubySoulNG
     @rsng_state_box.set_sensitive(false)
     @rsng_state_box.signal_connect("changed") do
       if (@ns.authenticated)
-        @ns.sock_send(NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp))
+        send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
         @rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
         @rs_config.save()
       end
@@ -737,8 +748,8 @@ class RubySoulNG
       h.set_value(6, "user_data")
       h.set_value(7, "location")
       if @ns.authenticated
-        @ns.sock_send( NetSoul::Message::who_users(@rs_contact.get_users_list()) )
-        @ns.sock_send( NetSoul::Message::watch_users(@rs_contact.get_users_list()) )
+        send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+        send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
       end
     else
       RsInfobox.new(@contact_win, "No must specify the login", "warning")
@@ -820,11 +831,7 @@ end
 ########################
 if __FILE__ == $0
   Gtk.init()
-  begin
-    RubySoulNG.new
-  rescue
-    puts "Error: #{$!}"
-  end
+  RubySoulNG.new
   Gtk.main()
 end
 

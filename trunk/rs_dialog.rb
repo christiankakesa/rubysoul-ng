@@ -19,6 +19,7 @@ class RsDialog < Gtk::Window
     @login = login.to_s
     @num_session = num_session.to_i
     @ns = NetSoul::NetSoul::instance()
+    @rs_config = RsConfig::instance()
     set_icon(Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + @login}"))
     vbox = Gtk::VBox.new
     hbox = Gtk::HBox.new
@@ -27,6 +28,7 @@ class RsDialog < Gtk::Window
     @dialog_buffer = Gtk::TextBuffer.new
     @dialog_view_tv = Gtk::TextView.new(@dialog_buffer)
     @dialog_view_tv.set_editable(false)
+    @dialog_view_tv.set_can_focus(false)
     @dialog_view_tv.set_wrap_mode(Gtk::TextTag::WRAP_WORD_CHAR)
     @dialog_view = Gtk::ScrolledWindow.new().add(@dialog_view_tv)
     @dialog_view.set_policy(Gtk::POLICY_NEVER, Gtk::POLICY_AUTOMATIC)
@@ -37,9 +39,11 @@ class RsDialog < Gtk::Window
     @send_view_tv = Gtk::TextView.new(@send_buffer)
     @send_view_tv.set_wrap_mode(Gtk::TextTag::WRAP_WORD_CHAR)
     @send_view_tv.set_can_focus(true)
+    @send_view_tv.set_can_default(true)
     @send_view = Gtk::ScrolledWindow.new().add(@send_view_tv)
     @send_view.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC)
     @user_img = Gtk::Image.new(Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + @login}", 128, 128))
+    @user_img.set_can_focus(false)
     vbox.pack_start(@dialog_view, true, true, 3)
     hbox.pack_start(@send_view, true, true, 3)
     hbox.pack_end(@user_img, false, false, 3)
@@ -68,17 +72,25 @@ class RsDialog < Gtk::Window
   end
 
   def send_msg(user, msg)
-    if NetSoul::Message::trim(msg.to_s).length > 0
-      @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
-      @dialog_buffer.text += "(#{Time.now.strftime("%H:%M:%S")}) #{user.to_s}:"
-      @dialog_buffer.text += " #{msg.to_s}\n"
+    begin
+      if NetSoul::Message::trim(msg.to_s).length > 0
+        @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
+        @dialog_buffer.text += %Q[<span weight="bold" color="black">(#{Time.now.strftime("%H:%M:%S")}) #{@rs_config.conf[:login].to_s} send:</span>]
+        @dialog_buffer.text += %Q[<span color="black"> #{msg.to_s}] + "\n"
+      end
+      @send_buffer.delete(@send_buffer.start_iter, @send_buffer.end_iter)
+    rescue
+      puts "Error: #{$!}"
     end
-    @send_buffer.delete(@send_buffer.start_iter, @send_buffer.end_iter)
   end
 
   def receive_msg(user_from, msg)
-    @dialog_buffer.text += "(#{Time.now.strftime("%H:%M:%S")}) #{user_from.to_s}:"
-    @dialog_buffer.text += " #{msg.to_s}\n"
+    begin
+      @dialog_buffer.text += %Q[<span weight="bold" color="purple">(#{Time.now.strftime("%H:%M:%S")}) #{user_from.to_s} rcve:</span>]
+      @dialog_buffer.text += %Q[<span color="black"> #{msg.to_s}</span>] + "\n"
+    rescue
+      puts "Error: #{$!}"
+    end
   end
 end
 
