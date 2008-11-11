@@ -39,7 +39,7 @@ class RsContact
   #--- Remove contact to the YML file.
   def remove(login, save_it = false)
     @contacts.delete(login.to_s.to_sym)
-    if FileTest.exists?(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
+    if FileTest.exist?(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
       begin
         File.delete(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
       rescue
