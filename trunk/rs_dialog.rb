@@ -100,6 +100,9 @@ class RsDialog < Gtk::Window
         #puts "me end typing : #{@send_buffer.text.length.to_s}"
       end
     end
+    signal_connect("focus-in-event") do |widget, event|
+      set_urgency_hint(false)
+    end
   end
 
   def send_msg(user, msg)
