@@ -6,6 +6,7 @@ begin
   require 'uri'
   require 'digest/md5'
   require 'rs_config'
+  require 'rs_infobox'
 rescue LoadError
   puts "Error: #{$!}"
 end
@@ -24,7 +25,21 @@ module NetSoul
   end
 
   def self.kerberos_authentication(connection_values)
-
+    begin
+      require 'lib/kerberos/NsToken'
+    rescue LoadError
+      puts "Error: #{$!}"
+      puts "Build the \"NsToken\" ruby/c extension if you don't.\nSomething like this : \"cd ./lib/kerberos && ruby extconf.rb && make\""
+      exit
+    end
+    tk = NsToken.new
+    if not tk.get_token(connection_values[:login], connection_values[:unix_password])
+      puts "Impossible to retrieve the kerberos token !!!"
+      exit
+    end
+    #puts "TOKEN_B64: #{tk.token_base64}"
+    #puts "TOKEN_B64_LENGTH: #{tk.token_base64.length.to_s}"
+    return 'ext_user_klog %s %s %s %s %s'%[tk.token_base64.slice(0, 812), Message::escape(connection_values[:system]), Message::escape(connection_values[:location]), Message::escape(connection_values[:user_group]), Message::escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
   end
 
   def self.send_message(user, msg)
