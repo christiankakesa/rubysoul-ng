@@ -27,7 +27,7 @@ class RubySoulNG
 
   def initialize
     @domain = RsConfig::APP_NAME
-    bindtextdomain(@domain, nil, nil, "UTF-8")
+    #bindtextdomain(@domain, nil, nil, "UTF-8")
     @glade = GladeXML.new(
     "#{RsConfig::APP_DIR+File::SEPARATOR}rubysoul-ng_win.glade",
     nil,
@@ -133,7 +133,9 @@ class RubySoulNG
     begin
       buff = @ns.sock_get().to_s
     rescue
-      disconnection() && connection() && return
+      disconnection()
+      connection()
+      return
     end
     if not (buff.length > 0)
       return
@@ -575,14 +577,10 @@ class RubySoulNG
       if iter
         if iter[8].to_s != "children"
           login = iter[3]
-          @user_model.remove(iter) && @rs_contact.remove(login.to_s, true)
-          if FileTest.exists?(CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
-            begin
-          		File.delete(CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
-          	rescue
-          		RsInfobox.new(@rsng_win, "#{$!}", "warning")
-          	end
-          end
+          @user_model.remove(iter)
+          @rs_contact.remove(login.to_s, true)
+          #send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+      		#send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
       end
     end
