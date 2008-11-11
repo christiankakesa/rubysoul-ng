@@ -53,6 +53,7 @@ module NetSoul
       @authenticated = false
       sock_send("auth_ag ext_user none -")
       rep = sock_get()
+      #puts "auth_ag #{rep}"
       if not (rep.split(' ')[1] == "002")
         return false
       end
@@ -64,6 +65,7 @@ module NetSoul
       end
 
       rep = sock_get()
+      #puts "ext_user_klog/ext_user_log  #{rep}"
       if not (rep.split(' ')[1] == "002")
         return false
       end
