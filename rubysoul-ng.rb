@@ -301,6 +301,7 @@ class RubySoulNG
       end
       @user_dialogs[login.to_sym].show_all()
       @user_dialogs[login.to_sym].receive_msg(login.to_s, msg)
+      @user_dialogs[login.to_sym].set_urgency_hint(true)
       #puts "[msg] : " + sender + " - " + sub_cmd + " - " + msg + " - " + response
     when "who"
       if not response.match(/cmd end$/)
