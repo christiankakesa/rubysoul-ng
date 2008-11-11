@@ -4,8 +4,8 @@
 
 begin
   require 'open-uri'
-  require 'rs_config'
   require 'singleton'
+  require 'rs_infobox'
 rescue LoadError
   puts "Error: #{$!}"
   exit
@@ -39,14 +39,23 @@ class RsContact
   #--- Remove contact to the YML file.
   def remove(login, save_it = false)
     @contacts.delete(login.to_s.to_sym)
+    if FileTest.exists?(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
+      begin
+        File.delete(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
+      rescue
+        RsInfobox.new(@rsng_win, "#{$!}", "warning")
+      end
+    end
     save() if save_it
   end
 
   #--- Save contact hash table to the YAML file
   def save
     c = Hash.new
-    @contacts.each do |k, v|
-      c[k.to_s.to_sym] = Hash.new
+    if @contacts.length > 0
+      @contacts.each do |k, v|
+        c[k.to_s.to_sym] = Hash.new
+      end
     end
     File.open(RsConfig::CONTACTS_FILENAME, "wb") do |file|
       file.puts '#--- ! RubySoulNG contacts file'
