@@ -582,7 +582,7 @@ class RubySoulNG
           @user_model.remove(iter)
           @rs_contact.remove(login.to_s, true)
           #send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-          #send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+          send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
       end
     end
