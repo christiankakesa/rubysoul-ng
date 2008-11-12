@@ -72,10 +72,12 @@ class RsDialog < Gtk::Window
     vbox.pack_end(@statusbar, false, false)
     add(vbox)
     set_focus_child(@send_view_tv)
+    @send_view_tv.set_cursor_visible(true) if not @send_view_tv.cursor_visible?
     signal_connect('delete-event') do |widget, ev|
       widget.hide_all()
     end
     signal_connect("key-press-event") do |widget, event|
+      @send_view_tv.set_cursor_visible(true) if not @send_view_tv.cursor_visible?
       if event.state & Gdk::Window::ModifierType::CONTROL_MASK != 0 and event.keyval == Gdk::Keyval::GDK_l
         @dialog_buffer.delete(@dialog_buffer.start_iter, @dialog_buffer.end_iter)
         set_focus_child(@send_view_tv)
@@ -84,7 +86,6 @@ class RsDialog < Gtk::Window
         when Gdk::Keyval::GDK_Return, Gdk::Keyval::GDK_KP_Enter, Gdk::Keyval::GDK_3270_Enter, Gdk::Keyval::GDK_ISO_Enter
           if @send_buffer.text.length > 0
             send_msg(@login, @send_buffer.text)
-            @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
           end
           set_focus_child(@send_view_tv)
         end
@@ -102,16 +103,19 @@ class RsDialog < Gtk::Window
     end
     signal_connect("focus-in-event") do |widget, event|
       set_urgency_hint(false)
+      @send_view_tv.set_cursor_visible(true) if not @send_view_tv.cursor_visible?
     end
   end
 
   def send_msg(user, msg)
     begin
       if NetSoul::Message::trim(msg.to_s).length > 0
+      	msg = NetSoul::Message.clean_msg(msg)
         @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
         @dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})" , @send_foreground_time)
         @dialog_buffer.insert(@dialog_buffer.end_iter, " #{@rs_config.conf[:login].to_s}:", @send_foreground_login)
         @dialog_buffer.insert(@dialog_buffer.end_iter, " #{msg.to_s}\n")
+        @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
       end
       @send_buffer.delete(@send_buffer.start_iter, @send_buffer.end_iter)
     rescue
@@ -121,9 +125,11 @@ class RsDialog < Gtk::Window
 
   def receive_msg(user_from, msg)
     begin
+    	msg = NetSoul::Message.clean_msg(msg)
       @dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})", @recv_foreground_time)
       @dialog_buffer.insert(@dialog_buffer.end_iter, " #{user_from.to_s}:", @recv_foreground_login)
       @dialog_buffer.insert(@dialog_buffer.end_iter, " #{msg.to_s}\n")
+      @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
     rescue
       RsInfobox.new(self, "#{$!}", "error")
     end

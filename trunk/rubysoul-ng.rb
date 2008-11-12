@@ -140,7 +140,7 @@ class RubySoulNG
     if not (buff.length > 0)
       return
     end
-    #puts buff.to_s
+    puts buff.to_s
     case buff.split(' ')[0]
     when "ping"
       ping()
@@ -202,7 +202,7 @@ class RubySoulNG
 
   def send_cmd(msg)
     @mutex_send_msg.synchronize do
-      @ns.sock_send(msg)
+    	@ns.sock_send(msg)
     end
   end
 
@@ -212,7 +212,7 @@ class RubySoulNG
   end
 
   def rep(cmd)
-    msg_num= cmd.split(' ')[1]
+    msg_num = cmd.split(' ')[1]
     case msg_num.to_s
     when "001"
       #Command unknown
@@ -225,6 +225,9 @@ class RubySoulNG
     when "033"
       #Login or password incorrect
       RsInfobox.new(self, "Login or password incorrect", "warning")
+    when "131"
+      #Permision denied
+      RsInfobox.new(self, "Permision denied", "warning")
     when "140"
       RsInfobox.new(self, "User identification failed", "warning")
     else
@@ -236,26 +239,32 @@ class RubySoulNG
   end
 
   def user_cmd(usercmd)
-    cmd, user	= NetSoul::Message.trim(usercmd.split('|')[0]).split(' ')
-    response	= NetSoul::Message.trim(usercmd.split('|')[1])
-    sub_cmd	= NetSoul::Message.trim(user.split(':')[1])
-    case sub_cmd.to_s
-    when "mail"
-      sender, subject = response.split(' ')[2..3]
-      msg = "Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2]
-      RsInfobox.new(self, msg, "info", false)
-      return true
-    when "host"
-      sender = response.split(' ')[2]
-      msg = "Appel en en cours... !!!\nDe: " + URI.unescape(sender)[1..-1]
-      RsInfobox.new(self, msg, "info", false)
-      return true
-    when "user"
-      get_user_response(cmd, user, response)
-      return true
-    else
-      #puts "[user_cmd] : " + usercmd + " - This command is not parsed, please contacte the developper"
-      return false
+    begin
+      cmd, user	= NetSoul::Message.trim(usercmd.split('|')[0]).split(' ')
+      response	= NetSoul::Message.trim(usercmd.split('|')[1])
+      sub_cmd	= NetSoul::Message.trim(user.split(':')[1])
+      case sub_cmd.to_s
+      when "mail"
+        sender, subject = response.split(' ')[2..3]
+        msg = "Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2]
+        RsInfobox.new(self, msg, "info", false)
+        return true
+      when "host"
+        sender = response.split(' ')[2]
+        msg = "Appel en en cours... !!!\nDe: " + URI.unescape(sender)[1..-1]
+        RsInfobox.new(self, msg, "info", false)
+        return true
+      when "user"
+        get_user_response(cmd, user, response)
+        return true
+      else
+        #puts "[user_cmd] : " + usercmd + " - This command is not parsed, please contacte the developper"
+        return false
+      end
+    rescue
+      RsInfobox.new(self, "#{$!}", "warning")
+      disconnection()
+      connection()
     end
   end
 
@@ -267,27 +276,19 @@ class RubySoulNG
       #| dotnetSoul_UserTyping null dst=kakesa_c
       socket = response.split(' ')[1]
       login = sender.to_s
-      if not @user_dialogs.include?(login.to_sym)
-        @user_dialogs[login.to_sym] = RsDialog.new(login.to_s, socket)
-        @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
-          @user_dialogs[login.to_sym].hide_all()
-        end
+      if @user_dialogs.include?(login.to_sym)
+        @user_dialogs[login.to_sym].show_all()
+        @user_dialogs[login.to_sym].print_user_typing_status()
       end
-      @user_dialogs[login.to_sym].show_all()
-      @user_dialogs[login.to_sym].print_user_typing_status()
       #puts "[#{sub_cmd.to_s}] : " + sender + " - " + sub_cmd + " - " + response
     when "dotnetSoul_UserCancelledTyping", "typing_end"
       #| dotnetSoul_UserCancelledTyping null dst=kakesa_c
       socket = response.split(' ')[1]
       login = sender.to_s
-      if not @user_dialogs.include?(login.to_sym)
-        @user_dialogs[login.to_sym] = RsDialog.new(login.to_s, socket)
-        @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
-          @user_dialogs[login.to_sym].hide_all()
-        end
+      if @user_dialogs.include?(login.to_sym)
+        @user_dialogs[login.to_sym].show_all()
+        @user_dialogs[login.to_sym].print_init_status()
       end
-      @user_dialogs[login.to_sym].show_all()
-      @user_dialogs[login.to_sym].print_init_status()
       #puts "[#{sub_cmd.to_s}] : " + sender + " - " + sub_cmd + " - " + response
     when "msg"
       msg = URI.unescape(response.split(' ')[1])
@@ -581,7 +582,7 @@ class RubySoulNG
           @user_model.remove(iter)
           @rs_contact.remove(login.to_s, true)
           #send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-      		#send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+          #send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
       end
     end

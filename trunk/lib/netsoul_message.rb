@@ -20,8 +20,8 @@ module NetSoul
       connection_values[:socks_password]	])
       return 'ext_user_log %s %s %s %s'%[	connection_values[:login],
       auth_string,
-      Message::escape(Location::get(connection_values[:client_ip]) == "ext" ? connection_values[:location] : Location::get(connection_values[:client_ip])),
-    Message::escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
+      Message.escape(Location::get(connection_values[:client_ip]) == "ext" ? connection_values[:location] : Location::get(connection_values[:client_ip])),
+    Message.escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
   end
 
   def self.kerberos_authentication(connection_values)
@@ -39,11 +39,11 @@ module NetSoul
     end
     #puts "TOKEN_B64: #{tk.token_base64}"
     #puts "TOKEN_B64_LENGTH: #{tk.token_base64.length.to_s}"
-    return 'ext_user_klog %s %s %s %s %s'%[tk.token_base64.slice(0, 812), Message::escape(connection_values[:system]), Message::escape(connection_values[:location]), Message::escape(connection_values[:user_group]), Message::escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
+    return 'ext_user_klog %s %s %s %s %s'%[tk.token_base64.slice(0, 812), Message.escape(connection_values[:system]), Message.escape(connection_values[:location]), Message.escape(connection_values[:user_group]), Message.escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
   end
 
   def self.send_message(user, msg)
-    return 'user_cmd msg_user %s msg %s'%[user, Message::escape(msg)]
+    return 'user_cmd msg_user %s msg %s'%[user, Message.escape(msg)]
   end
 
   def self.start_writing_to_user(user)
@@ -71,7 +71,7 @@ module NetSoul
   end
 
   def self.set_user_data(data)
-    return 'user_cmd user_data %s'%[Message::escape(data)]
+    return 'user_cmd user_data %s'%[Message.escape(data)]
   end
 
   def self.ping
@@ -96,9 +96,16 @@ module NetSoul
   end
 
   def self.trim(str)
-    str = Message::ltrim(str)
-    str = Message::rtrim(str)
+    str = Message.ltrim(str)
+    str = Message.rtrim(str)
     return str
+  end
+  
+  def self.clean_msg(msg)
+  	msg = msg.to_s.gsub(/\n+$/, '')		#--- | Remove carriage return at the end of line
+  	msg = msg.gsub(/(\\n)+$/, '')	#--- | Remove all real '\' and 'n' characters at end of line
+  	msg = Message.trim(msg)
+  	return msg
   end
 end
 end
