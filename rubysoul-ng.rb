@@ -891,6 +891,9 @@ class RubySoulNG
     ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dylib")
     ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dll")
     @rs_config.conf[:connection_type] = @account_connection_type_krb5.active?() && ns_token_found ? "krb5" : "md5"
+    if @account_connection_type_krb5.active?() && !ns_token_found
+    	RsInfobox.new(@rsng_win, "NsToken is not build for kerberos authentication, MD5 authentication selected", "warning")
+    end
     @rs_config.conf[:location] = @account_location_entry.text.to_s if @account_location_entry.text.length > 0
     @rs_config.conf[:user_group] = @account_user_group_entry.text.to_s if @account_user_group_entry.text.length > 0
     @rs_config.conf[:connection_at_startup] = @account_connection_at_startup_checkbox.active?() ? true : false
