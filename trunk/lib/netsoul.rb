@@ -56,7 +56,7 @@ module NetSoul
         return false
       end
 
-      if (@rs_config.conf[:connection_type].to_s == "md5")
+      if (@rs_config.conf[:connection_type].to_s == "krb5")
         sock_send(Message.kerberos_authentication(@connection_values))
       else
         sock_send(Message.standard_authentication(@connection_values))
