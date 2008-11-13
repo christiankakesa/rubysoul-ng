@@ -144,6 +144,8 @@ class RubySoulNG
       return true
     else
       RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server.\nRetry to connect or in terminal \"kinit login_l\"", "error", false)
+      @preferences_win.show_all()
+      @preferences_nbook.set_page(0)
       return false
     end
   end
@@ -877,14 +879,14 @@ class RubySoulNG
     conf[:connection_at_startup].eql?(true) ? @account_connection_at_startup_checkbox.set_active(true) : @account_connection_at_startup_checkbox.set_active(false)
   end
   def preferences_account_save_config
-    @rs_config.conf[:login] = @account_login_entry.text if @account_login_entry.text.length > 0
-    @rs_config.conf[:socks_password] = @account_socks_password_entry.text if @account_socks_password_entry.text.length > 0
-    @rs_config.conf[:unix_password] = @account_unix_password_entry.text if @account_unix_password_entry.text.length > 0
-    @rs_config.conf[:server_host] = @account_server_host_entry.text if @account_server_host_entry.text.length > 0
-    @rs_config.conf[:server_port] = @account_server_port_entry.text if @account_server_port_entry.text.length > 0
+    @rs_config.conf[:login] = @account_login_entry.text.to_s if @account_login_entry.text.length > 0
+    @rs_config.conf[:socks_password] = @account_socks_password_entry.text.to_s if @account_socks_password_entry.text.length > 0
+    @rs_config.conf[:unix_password] = @account_unix_password_entry.text.to_s if @account_unix_password_entry.text.length > 0
+    @rs_config.conf[:server_host] = @account_server_host_entry.text.to_s if @account_server_host_entry.text.length > 0
+    @rs_config.conf[:server_port] = @account_server_port_entry.text.to_s if @account_server_port_entry.text.length > 0
     @rs_config.conf[:connection_type] = @account_connection_type_krb5.active?() ? "krb5" : "md5"
-    @rs_config.conf[:location] = @account_location_entry.text if @account_location_entry.text.length > 0
-    @rs_config.conf[:user_group] = @account_user_group_entry.text if @account_user_group_entry.text.length > 0
+    @rs_config.conf[:location] = @account_location_entry.text.to_s if @account_location_entry.text.length > 0
+    @rs_config.conf[:user_group] = @account_user_group_entry.text.to_s if @account_user_group_entry.text.length > 0
     @rs_config.conf[:connection_at_startup] = @account_connection_at_startup_checkbox.active?() ? true : false
     @rs_config.save()
   end

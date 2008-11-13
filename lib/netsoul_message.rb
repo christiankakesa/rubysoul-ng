@@ -30,12 +30,12 @@ module NetSoul
     rescue LoadError
       puts "Error: #{$!}"
       puts "Build the \"NsToken\" ruby/c extension if you don't.\nSomething like this : \"cd ./lib/kerberos && ruby extconf.rb && make\""
-      exit
+      return
     end
     tk = NsToken.new
     if not tk.get_token(connection_values[:login], connection_values[:unix_password])
       puts "Impossible to retrieve the kerberos token !!!"
-      exit
+      return
     end
     #puts "TOKEN_B64: #{tk.token_base64}"
     #puts "TOKEN_B64_LENGTH: #{tk.token_base64.length.to_s}"
