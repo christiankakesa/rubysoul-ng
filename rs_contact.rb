@@ -19,25 +19,25 @@ class RsContact
   def initialize(parent_win = nil)
     @parent_win = parent_win
     load_contacts()
-    if not @contacts.is_a?(Hash)
-      @contacts = Hash.new
-    end
     @url_photo = RsConfig::CONTACTS_PHOTO_URL #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
     get_users_photo()
   end
 
   def load_contacts
     @contacts = YAML::load_file(RsConfig::CONTACTS_FILENAME)
+    if not @contacts.is_a?(Hash)
+      @contacts = Hash.new
+    end
   end
   #--- Add login to the YML contact file.
   def add(login, save_it = false)
     if not (@contacts.include?(login.to_sym))
-      total_length = get_users_list().length + login.length
+      total_length = get_users_list().to_s.length + login.to_s.length
       if total_length <= 1022 # 1022 is limit of netsoul watch_log_user command
       	@contacts[login.to_sym] = Hash.new
       	save() if save_it
       else
-      	RsInfobox.new(@parent_win, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nthis limitation is server limit, sorry.", "warning")
+      	RsInfobox.new(@parent_win, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nThis limitation is server limit, sorry.", "warning")
       end
     end
   end
