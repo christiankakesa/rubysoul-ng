@@ -10,6 +10,7 @@ $KCODE = 'u'
 begin
   require 'libglade2'
   require 'thread'
+  require 'fix_gtk'
   require 'lib/netsoul'
   require 'rs_config'
   require 'rs_contact'
@@ -61,21 +62,25 @@ class RubySoulNG
     @rs_config = RsConfig::instance()
     @rs_contact = RsContact::instance(@rsng_win)
     @mutex_send_msg = Mutex.new
-		@parse_thread = nil
-    Thread.new do
-    	rsng_user_view_init()
+    @parse_thread = nil
+    start_thread = Thread.new do
+    	Thread.stop
+      @ns = NetSoul::NetSoul::instance()
+      if @rs_config.conf[:connection_at_startup]
+        connection()
+      end
+      Thread.exit
     end
-    Thread.new do
-    	rsng_state_box_init()
+    Gtk.queue do
+      rsng_state_box_init()
     end
-    Thread.new do
-    	preferences_account_init()
-    	preferences_account_load_config(@rs_config.conf)
+    Gtk.queue do
+      preferences_account_init()
+      preferences_account_load_config(@rs_config.conf)
     end
-
-    @ns = NetSoul::NetSoul::instance()
-    if @rs_config.conf[:connection_at_startup]
-      connection()
+		Gtk.queue do
+      rsng_user_view_init()
+      start_thread.run()
     end
   end
 
@@ -126,7 +131,7 @@ class RubySoulNG
     @parse_thread.exit if @parse_thread.is_a?(Thread)
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
-		@rs_contact.load_contacts()
+    @rs_contact.load_contacts()
     @user_model.clear()
     @user_model_iter_offline = @user_model.append(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
@@ -185,7 +190,7 @@ class RubySoulNG
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
         if not @user_dialogs.include?(login.to_sym)
-        	@user_dialogs[login.to_sym] = RsDialog.new(login, socket)
+          @user_dialogs[login.to_sym] = RsDialog.new(login, socket)
           @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
             @user_dialogs[login.to_sym].hide_all()
           end
@@ -224,7 +229,7 @@ class RubySoulNG
 
   def send_cmd(msg)
     @mutex_send_msg.synchronize do
-    	@ns.sock_send(msg)
+      @ns.sock_send(msg)
     end
   end
 
@@ -245,7 +250,7 @@ class RubySoulNG
     when "003"
       #bad number of arguments
     when "028"
-    	#watch_log too long
+      #watch_log too long
     when "033"
       #Login or password incorrect
       RsInfobox.new(self, "Login or password incorrect", "warning")
@@ -615,8 +620,8 @@ class RubySoulNG
           @user_model.remove(iter)
           @rs_contact.remove(login.to_s, true)
           if @user_dialogs.include?(login.to_sym)
-          	@user_dialogs[login.to_sym].destroy()
-          	@user_dialogs.delete(login.to_sym)
+            @user_dialogs[login.to_sym].destroy()
+            @user_dialogs.delete(login.to_sym)
           end
           send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
@@ -890,7 +895,7 @@ class RubySoulNG
   end
 
   #--- | About window
-  
+
   #--- | Other stuff
   def print_init_status
     set_status(@ctx_init_id, "#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
@@ -913,6 +918,6 @@ end
 if __FILE__ == $0
   Gtk.init()
   RubySoulNG.new
-  Gtk.main()
+  Gtk.main_with_queue 100
 end
 
