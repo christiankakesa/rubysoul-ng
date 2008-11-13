@@ -17,7 +17,7 @@ module NetSoul
     include Singleton
 
     # attr_accessor :sock
-    attr_reader :connection_values, :authenticated
+    attr_reader :connection_values, :authenticated, :sock
 
     def initialize
       @rs_config = RsConfig::instance()
@@ -27,12 +27,11 @@ module NetSoul
     end
 
     def connect
-      @sock = nil
-      @sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-      if (@sock.closed?)
+    	@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
+      if (!@sock)
         return false
       end
-      buf = sock_get
+      buf = sock_get()
       cmd, socket_num, md5_hash, client_ip, client_port, server_timestamp = buf.split
       server_timestamp_diff = Time.now.to_i - server_timestamp.to_i
       @connection_values[:md5_hash] = md5_hash
@@ -53,7 +52,6 @@ module NetSoul
       @authenticated = false
       sock_send("auth_ag ext_user none -")
       rep = sock_get()
-      #puts "auth_ag #{rep}"
       if not (rep.split(' ')[1] == "002")
         return false
       end
@@ -65,7 +63,6 @@ module NetSoul
       end
 
       rep = sock_get()
-      #puts "ext_user_klog/ext_user_log  #{rep}"
       if not (rep.split(' ')[1] == "002")
         return false
       end
@@ -82,16 +79,13 @@ module NetSoul
     end
 
     def sock_send(string)
-      if (!@sock.closed? && string.to_s.length > 0)
-        @sock.puts string
-      else
-        sock_close()
-        @authenticated = false
+      if (@sock && string.to_s.length > 0)
+        @sock.puts string.to_s
       end
     end
 
     def sock_get
-      if (!@sock.closed?)
+      if (@sock)
         response = @sock.gets
         response = response.to_s.chomp
         return response
@@ -100,8 +94,10 @@ module NetSoul
     end
 
     def sock_close
-      if (!@sock.closed?)
+      if (@sock)
         @sock.close()
+        @sock = nil
+        @authenticated = false
       end
     end
 

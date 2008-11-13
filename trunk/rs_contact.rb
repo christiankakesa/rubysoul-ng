@@ -16,8 +16,9 @@ class RsContact
 
   attr_accessor :contacts, :url_photo
 
-  def initialize
-    @contacts = YAML::load_file(RsConfig::CONTACTS_FILENAME)
+  def initialize(parent_win = nil)
+    @parent_win = parent_win
+    load_contacts()
     if not @contacts.is_a?(Hash)
       @contacts = Hash.new
     end
@@ -31,8 +32,13 @@ class RsContact
   #--- Add login to the YML contact file.
   def add(login, save_it = false)
     if not (@contacts.include?(login.to_sym))
-      @contacts[login.to_sym] = Hash.new
-      save() if save_it
+      total_length = get_users_list().length + login.length
+      if total_length <= 1022 # 1022 is limit of netsoul watch_log_user command
+      	@contacts[login.to_sym] = Hash.new
+      	save() if save_it
+      else
+      	RsInfobox.new(@parent_win, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nthis limitation is server limit, sorry.", "warning")
+      end
     end
   end
 
@@ -43,7 +49,7 @@ class RsContact
       begin
         File.delete(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
       rescue
-        RsInfobox.new(@rsng_win, "#{$!}", "warning")
+        RsInfobox.new(@parent_win, "#{$!}", "warning")
       end
     end
     save() if save_it

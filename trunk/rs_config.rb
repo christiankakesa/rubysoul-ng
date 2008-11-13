@@ -41,6 +41,7 @@ class RsConfig
   ICON_CONNECT = "#{THEME_DIR+File::SEPARATOR}Connect.png"
   ICON_MULTICONNECT = "#{THEME_DIR+File::SEPARATOR}Multiconnect.png"
   ICON_DISCONNECT = "#{THEME_DIR+File::SEPARATOR}Disconnect.png"
+  ICON_OFFLINE = "#{THEME_DIR+File::SEPARATOR}Offline.png"
   ICON_STATE_ACTIF = "#{THEME_DIR+File::SEPARATOR}StateActif.png"
   ICON_STATE_LOGIN = "#{THEME_DIR+File::SEPARATOR}StateLogin.png"
   ICON_STATE_CONNECTION = "#{THEME_DIR+File::SEPARATOR}StateConnection.png"

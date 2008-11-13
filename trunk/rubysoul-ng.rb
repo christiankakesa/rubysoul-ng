@@ -38,6 +38,7 @@ class RubySoulNG
     end
     @rsng_win = @glade['RubySoulNG']
     @rsng_win.set_title("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
+    @rsng_win.set_allow_shrink(true)
     @rsng_tb_connect = @glade['tb_connect']
     @rsng_user_view = @glade['user_view']
     @rsng_state_box = @glade['state_box']
@@ -50,17 +51,27 @@ class RubySoulNG
     @account_socks_password_entry = @glade['account_socks_password_entry']
     @account_unix_password_entry = @glade['account_unix_password_entry']
     @aboutdialog = @glade['aboutdialog']
+    @statusbar = @glade['statusbar']
+    @ctx_init_id = @statusbar.get_context_id("init")
+    @ctx_offline_id = @statusbar.get_context_id("offline")
+    @ctx_online_id = @statusbar.get_context_id("online")
+    @ctx_current_id = @ctx_init_id
+    print_init_status()
     @user_dialogs = Hash.new
-
     @rs_config = RsConfig::instance()
-    @rs_contact = RsContact::instance()
-
+    @rs_contact = RsContact::instance(@rsng_win)
     @mutex_send_msg = Mutex.new
-
-    rsng_user_view_init()
-    rsng_state_box_init()
-    preferences_account_init()
-    preferences_account_load_config(@rs_config.conf)
+		@parse_thread = nil
+    Thread.new do
+    	rsng_user_view_init()
+    end
+    Thread.new do
+    	rsng_state_box_init()
+    end
+    Thread.new do
+    	preferences_account_init()
+    	preferences_account_load_config(@rs_config.conf)
+    end
 
     @ns = NetSoul::NetSoul::instance()
     if @rs_config.conf[:connection_at_startup]
@@ -88,31 +99,43 @@ class RubySoulNG
     if @ns.connect()
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
-      @rsng_user_view.set_sensitive(true)
       @parse_thread = Thread.new do
-        loop do
-          parse_cmd() if @ns.authenticated
+        while @ns.sock
+          parse_cmd()
+          Thread.pass
         end
+        puts "Exit while parse_cmd()..."
+        disconnection(false) #without @ns.disconnect()
+        puts "Disconnected..."
+        connection()
+        puts ""
+        Thread.exit
       end
       rsng_state_box_update()
       send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
       send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+      print_online_status()
       return true
     else
       RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server.\nRetry to connect or in terminal \"kinit login_l\"", "error", false)
       return false
     end
   end
-  def disconnection
-    @ns.disconnect()
-    @parse_thread.kill!
+  def disconnection(ns_server_too = true)
+    @ns.disconnect() if ns_server_too
+    @parse_thread.exit if @parse_thread.is_a?(Thread)
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
+		@rs_contact.load_contacts()
     @user_model.clear()
+    @user_model_iter_offline = @user_model.append(nil)
+    @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
+    @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rs_contact.contacts.each do |key, value|
-      h = @user_model.append(nil)
+      h = @user_model.append(@user_model_iter_offline)
       h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-      h.set_value(1, %Q[<span weight="bold" size="large">#{key.to_s}</span>])
+      h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
       if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
         h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
       else
@@ -124,23 +147,16 @@ class RubySoulNG
       h.set_value(6, "user_data")
       h.set_value(7, "location")
     end
-    @rsng_user_view.set_sensitive(false)
     @rsng_state_box.set_sensitive(false)
-    @rs_contact.load_contacts()
+    print_offline_status()
   end
 
   def parse_cmd
-    begin
-      buff = @ns.sock_get().to_s
-    rescue
-      disconnection()
-      connection()
-      return
-    end
+    buff = @ns.sock_get().to_s
     if not (buff.length > 0)
       return
     end
-    puts buff.to_s
+    #puts buff.to_s
     case buff.split(' ')[0]
     when "ping"
       ping()
@@ -168,6 +184,12 @@ class RubySoulNG
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:status] = status.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
+        if not @user_dialogs.include?(login.to_sym)
+        	@user_dialogs[login.to_sym] = RsDialog.new(login, socket)
+          @user_dialogs[login.to_sym].signal_connect("delete-event") do |widget, event|
+            @user_dialogs[login.to_sym].hide_all()
+          end
+        end
         @user_model.each do |model,path,iter|
           if (iter[4].to_s == socket.to_s)
             iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(status.to_s), 24, 24))
@@ -177,7 +199,7 @@ class RubySoulNG
               my_location += "..."
             end
             if @rs_contact.contacts[login.to_sym][:connections].length == 1
-              iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+              iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
               if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
                 iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
               else
@@ -222,6 +244,8 @@ class RubySoulNG
       return true
     when "003"
       #bad number of arguments
+    when "028"
+    	#watch_log too long
     when "033"
       #Login or password incorrect
       RsInfobox.new(self, "Login or password incorrect", "warning")
@@ -360,7 +384,7 @@ class RubySoulNG
         @rs_contact.contacts[login.to_sym][:connections].each do |key, val|
           iter = @user_model.prepend(nil)
           iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(val[:status]), 24, 24))
-          iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+          iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
           if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
             iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
           else
@@ -376,7 +400,7 @@ class RubySoulNG
         @user_model.each do |model,path,iter|
           if (iter[3].to_s == login.to_s)
             iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
-            iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+            iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
             if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
               iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
             else
@@ -442,9 +466,9 @@ class RubySoulNG
           @user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
-          iter = @user_model.append(nil)
+          iter = @user_model.append(@user_model_iter_offline)
           iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-          iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+          iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
           if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
             iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
           else
@@ -465,7 +489,7 @@ class RubySoulNG
           @rs_contact.contacts[login.to_sym][:connections].each do |key, val|
             iter = @user_model.prepend(nil)
             iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(val[:status].to_s), 24, 24))
-            iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+            iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
             if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
               iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
             else
@@ -527,7 +551,7 @@ class RubySoulNG
   def rsng_user_view_init
     #--- | ICON_STATE, HTML Login, PHOTO, Login, {sublist} SessionNum, State, UserData, Location, Children?
     @user_model = Gtk::TreeStore.new(Gdk::Pixbuf, String, Gdk::Pixbuf, String, String, String, String, String, String)
-    #@user_model.set_sort_column_id(1)
+    @user_model.set_sort_column_id(3)
     @rsng_user_view.set_model(@user_model)
     renderer = Gtk::CellRendererPixbuf.new
     renderer.set_xalign(0.5)
@@ -536,17 +560,25 @@ class RubySoulNG
     @rsng_user_view.append_column(column)
     renderer = Gtk::CellRendererText.new
     renderer.set_alignment(Pango::ALIGN_LEFT)
+    #renderer.set_ellipsize(Pango::ELLIPSIZE_START)
+    #renderer.set_wrap-width(26)
     column = Gtk::TreeViewColumn.new("Login / Location", renderer, :markup => 1)
+    column.set_sizing(Gtk::TreeViewColumn::AUTOSIZE)
     @rsng_user_view.append_column(column)
     renderer = Gtk::CellRendererPixbuf.new
     renderer.set_xalign(1.0)
     renderer.set_yalign(0.5)
     column = Gtk::TreeViewColumn.new("Photo", renderer, :pixbuf => 2)
+    column.set_sizing(Gtk::TreeViewColumn::FIXED)
     @rsng_user_view.append_column(column)
+    @user_model_iter_offline = @user_model.prepend(nil)
+    @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
+    @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rs_contact.contacts.each do |key, value|
-      h = @user_model.append(nil)
+      h = @user_model.append(@user_model_iter_offline)
       h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-      h.set_value(1, %Q[<span weight="bold" size="large">#{key.to_s}</span>])
+      h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
       if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
         h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
       else
@@ -557,6 +589,7 @@ class RubySoulNG
       h.set_value(5, "status")
       h.set_value(6, "user_data")
       h.set_value(7, "location")
+      h.set_value(8, "children_offline")
     end
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
       if (	view.model.get_iter(path)[5].to_s.eql?("actif") or view.model.get_iter(path)[5].to_s.eql?("away") or view.model.get_iter(path)[5].to_s.eql?("busy") or view.model.get_iter(path)[5].to_s.eql?("idle") or view.model.get_iter(path)[5].to_s.eql?("lock")	)
@@ -577,11 +610,14 @@ class RubySoulNG
     @rsng_user_view_menu_delete.signal_connect("activate") do |widget, event|
       iter = @rsng_user_view.selection.selected
       if iter
-        if iter[8].to_s != "children"
+        if (iter[8].to_s != "children" || iter[4].to_s == "num_session")
           login = iter[3]
           @user_model.remove(iter)
           @rs_contact.remove(login.to_s, true)
-          #send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+          if @user_dialogs.include?(login.to_sym)
+          	@user_dialogs[login.to_sym].destroy()
+          	@user_dialogs.delete(login.to_sym)
+          end
           send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
       end
@@ -593,7 +629,7 @@ class RubySoulNG
         if (event.button.to_i == 3)
           path, column, x, y = @rsng_user_view.get_path_at_pos(event.x, event.y)
           iter = @user_model.get_iter(path)
-          if (iter[8].to_s != "children" && iter == @rsng_user_view.selection.selected)
+          if ( iter[8].to_s != "children" && iter[3].to_s != "zzzzzz_z" && iter && iter == @rsng_user_view.selection.selected)
             @rsng_user_view_menu.popup(nil, nil, event.button, event.time) do |menu, x, y, push_in|
               [x, y, push_in]
             end
@@ -605,12 +641,16 @@ class RubySoulNG
   end
   def rsng_user_view_update
     @user_model.clear()
+    @user_model_iter_offline = @user_model.prepend(nil)
+    @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
+    @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rs_contact.contacts.each do |key, val|
       login = key
       if not @rs_contact.contacts[login.to_sym].include?(:connections)
-        iter = @user_model.append(nil)
+        iter = @user_model.append(@user_model_iter_offline)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_STATE_DISCONNECT, 24, 24))
-        iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+        iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
         if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
           iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
         else
@@ -625,7 +665,7 @@ class RubySoulNG
         val[:connections].each do |ke, va|
           iter = @user_model.prepend(nil)
           iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(va[:status]), 24, 24))
-          iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+          iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
           if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
             iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
           else
@@ -640,7 +680,7 @@ class RubySoulNG
       elsif val[:connections].length > 1
         iter = @user_model.prepend(nil)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
-        iter.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+        iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
         if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
           iter.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
         else
@@ -759,9 +799,9 @@ class RubySoulNG
       @rs_contact.add(login, true)
       @contact_add_entry.text = ""
       @rs_contact.get_users_photo()
-      h = @user_model.append(nil)
+      h = @user_model.append(@user_model_iter_offline)
       h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-      h.set_value(1, %Q[<span weight="bold" size="large">#{login.to_s}</span>])
+      h.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
       if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}"))
         h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s}", 32, 32))
       else
@@ -850,6 +890,22 @@ class RubySoulNG
   end
 
   #--- | About window
+  
+  #--- | Other stuff
+  def print_init_status
+    set_status(@ctx_init_id, "#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
+  end
+  def print_offline_status
+    set_status(@ctx_offline_id, "You are not connected !!!")
+  end
+  def print_online_status
+    set_status(@ctx_online_id, "Your are online")
+  end
+  def set_status(ctx_id, msg)
+    @statusbar.pop(@ctx_current_id) if @ctx_current_id
+    @statusbar.push(ctx_id, msg.to_s)
+    @ctx_current_id = ctx_id
+  end
 end
 
 ### MAIN APPLICATION ###
