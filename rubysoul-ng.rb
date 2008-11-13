@@ -63,24 +63,45 @@ class RubySoulNG
     @rs_contact = RsContact::instance(@rsng_win)
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
-    start_thread = Thread.new do
-    	Thread.stop
-      @ns = NetSoul::NetSoul::instance()
-      if @rs_config.conf[:connection_at_startup]
-        connection()
-      end
-      Thread.exit
+    Gtk.queue do
+    	rsng_user_view_init()
     end
     Gtk.queue do
       rsng_state_box_init()
     end
     Gtk.queue do
       preferences_account_init()
+    end
+    Gtk.queue do
       preferences_account_load_config(@rs_config.conf)
     end
-		Gtk.queue do
-      rsng_user_view_init()
-      start_thread.run()
+    start_thread = Thread.new do
+    	Thread.stop()
+    	@ns = NetSoul::NetSoul::instance()
+      if @rs_config.conf[:connection_at_startup]
+        connection()
+      end
+    	Thread.exit()
+    end
+    Thread.new do
+      @rs_contact.contacts.each do |key, value|
+        h = @user_model.append(@user_model_iter_offline)
+        h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+        h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
+        if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
+          h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
+        else
+          h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+        end
+        h.set_value(3, key.to_s)
+        h.set_value(4, "num_session")
+        h.set_value(5, "status")
+        h.set_value(6, "user_data")
+        h.set_value(7, "location")
+        h.set_value(8, "children_offline")
+      end
+      start_thread.run();
+      Thread.exit
     end
   end
 
@@ -580,22 +601,6 @@ class RubySoulNG
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
     @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
-    @rs_contact.contacts.each do |key, value|
-      h = @user_model.append(@user_model_iter_offline)
-      h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-      h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-      if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
-        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
-      else
-        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
-      end
-      h.set_value(3, key.to_s)
-      h.set_value(4, "num_session")
-      h.set_value(5, "status")
-      h.set_value(6, "user_data")
-      h.set_value(7, "location")
-      h.set_value(8, "children_offline")
-    end
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
       if (	view.model.get_iter(path)[5].to_s.eql?("actif") or view.model.get_iter(path)[5].to_s.eql?("away") or view.model.get_iter(path)[5].to_s.eql?("busy") or view.model.get_iter(path)[5].to_s.eql?("idle") or view.model.get_iter(path)[5].to_s.eql?("lock")	)
         login = view.model.get_iter(path)[3]
