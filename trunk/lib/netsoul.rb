@@ -57,9 +57,13 @@ module NetSoul
       end
 
       if (@rs_config.conf[:connection_type].to_s == "krb5")
-        sock_send(Message.kerberos_authentication(@connection_values))
+        if not sock_send(Message.kerberos_authentication(@connection_values))
+        	return false
+        end
       else
-        sock_send(Message.standard_authentication(@connection_values))
+        if not sock_send(Message.standard_authentication(@connection_values))
+        	return false
+        end
       end
 
       rep = sock_get()
@@ -81,6 +85,9 @@ module NetSoul
     def sock_send(string)
       if (@sock && string.to_s.length > 0)
         @sock.puts string.to_s
+        return true
+      else
+      	return false
       end
     end
 
