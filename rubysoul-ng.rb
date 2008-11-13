@@ -64,7 +64,7 @@ class RubySoulNG
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
     Gtk.queue do
-    	rsng_user_view_init()
+      rsng_user_view_init()
     end
     Gtk.queue do
       rsng_state_box_init()
@@ -76,12 +76,12 @@ class RubySoulNG
       preferences_account_load_config(@rs_config.conf)
     end
     start_thread = Thread.new do
-    	Thread.stop()
-    	@ns = NetSoul::NetSoul::instance()
+      Thread.stop()
+      @ns = NetSoul::NetSoul::instance()
       if @rs_config.conf[:connection_at_startup]
         connection()
       end
-    	Thread.exit()
+      Thread.exit()
     end
     Thread.new do
       @rs_contact.contacts.each do |key, value|
@@ -161,23 +161,24 @@ class RubySoulNG
     @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     if @rs_contact
-    @rs_contact.contacts.each do |key, value|
-      h = @user_model.append(@user_model_iter_offline)
-      h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-      h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-      if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
-        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
-      else
-        h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+      @rs_contact.contacts.each do |key, value|
+        h = @user_model.append(@user_model_iter_offline)
+        h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+        h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
+        if (File.exist?("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}"))
+          h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + key.to_s}", 32, 32))
+        else
+          h.set_value(2, Gdk::Pixbuf.new("#{RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR}login_l", 32, 32))
+        end
+        h.set_value(3, key.to_s)
+        h.set_value(4, "num_session")
+        h.set_value(5, "status")
+        h.set_value(6, "user_data")
+        h.set_value(7, "location")
       end
-      h.set_value(3, key.to_s)
-      h.set_value(4, "num_session")
-      h.set_value(5, "status")
-      h.set_value(6, "user_data")
-      h.set_value(7, "location")
+      @rsng_state_box.set_sensitive(false)
+      print_offline_status()
     end
-    @rsng_state_box.set_sensitive(false)
-    print_offline_status()
   end
 
   def parse_cmd
@@ -885,7 +886,11 @@ class RubySoulNG
     @rs_config.conf[:unix_password] = @account_unix_password_entry.text.to_s if @account_unix_password_entry.text.length > 0
     @rs_config.conf[:server_host] = @account_server_host_entry.text.to_s if @account_server_host_entry.text.length > 0
     @rs_config.conf[:server_port] = @account_server_port_entry.text.to_s if @account_server_port_entry.text.length > 0
-    @rs_config.conf[:connection_type] = ( @account_connection_type_krb5.active?() && (FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.so") || FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dll") || FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.ddylib")) ) ? "krb5" : "md5"
+    ns_token_found = false
+    ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.so")
+    ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dylib")
+    ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dll")
+    @rs_config.conf[:connection_type] = @account_connection_type_krb5.active?() && ns_token_found ? "krb5" : "md5"
     @rs_config.conf[:location] = @account_location_entry.text.to_s if @account_location_entry.text.length > 0
     @rs_config.conf[:user_group] = @account_user_group_entry.text.to_s if @account_user_group_entry.text.length > 0
     @rs_config.conf[:connection_at_startup] = @account_connection_at_startup_checkbox.active?() ? true : false
@@ -924,8 +929,8 @@ end
 ### MAIN APPLICATION ###
 ########################
 if __FILE__ == $0
-  Gtk.init()
-  RubySoulNG.new
-  Gtk.main_with_queue 100
+Gtk.init()
+RubySoulNG.new
+Gtk.main_with_queue 100
 end
 
