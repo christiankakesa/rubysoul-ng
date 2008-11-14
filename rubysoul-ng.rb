@@ -58,6 +58,7 @@ class RubySoulNG
     @ctx_online_id = @statusbar.get_context_id("online")
     @ctx_current_id = @ctx_init_id
     print_init_status()
+    @user_online = 0
     @user_dialogs = Hash.new
     @rs_config = RsConfig::instance()
     @rs_contact = RsContact::instance(@rsng_win)
@@ -378,6 +379,8 @@ class RubySoulNG
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:status] = status.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
+        @user_online += 1
+      	print_online_status()
       else
         rsng_user_view_update()
       end
@@ -408,6 +411,8 @@ class RubySoulNG
       @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = "user_data"
       @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = "location"
       if @rs_contact.contacts[login.to_sym][:connections].length == 1
+      	@user_online += 1
+      	print_online_status()
         @user_model.each do |model,path,iter|
           @user_model.remove(iter) if (iter[3].to_s == login.to_s)
         end
@@ -493,7 +498,10 @@ class RubySoulNG
       if @rs_contact.contacts.include?(login.to_sym) && @rs_contact.contacts[login.to_sym].include?(:connections) && @rs_contact.contacts[login.to_sym][:connections].include?(socket.to_i)
         @rs_contact.contacts[login.to_sym][:connections].delete(socket.to_i)
         if @rs_contact.contacts[login.to_sym][:connections].length == 0 # delete and put at bottom
-          @user_model.each do |model,path,iter|
+          @user_online -= 1
+        	@user_online = 0 if @user_online < 0
+      		print_online_status()
+        	@user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
           iter = @user_model.append(@user_model_iter_offline)
@@ -920,7 +928,7 @@ class RubySoulNG
     set_status(@ctx_offline_id, "You are not connected !!!")
   end
   def print_online_status
-    set_status(@ctx_online_id, "Your are online")
+    set_status(@ctx_online_id, "Your are online | User online : #{@user_online.to_s}")
   end
   def set_status(ctx_id, msg)
     @statusbar.pop(@ctx_current_id) if @ctx_current_id
