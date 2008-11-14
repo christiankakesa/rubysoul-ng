@@ -39,6 +39,7 @@ class RubySoulNG
     end
     @rsng_win = @glade['RubySoulNG']
     @rsng_win.set_title("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
+    @rsng_win.set_size_request(RsConfig::DEFAULT_SIZE_W, RsConfig::DEFAULT_SIZE_H)
     @rsng_win.set_allow_shrink(true)
     @rsng_tb_connect = @glade['tb_connect']
     @rsng_user_view = @glade['user_view']
@@ -52,6 +53,8 @@ class RubySoulNG
     @account_socks_password_entry = @glade['account_socks_password_entry']
     @account_unix_password_entry = @glade['account_unix_password_entry']
     @aboutdialog = @glade['aboutdialog']
+    @aboutdialog.set_name(RsConfig::APP_NAME)
+    @aboutdialog.set_version(RsConfig::APP_VERSION)
     @statusbar = @glade['statusbar']
     @ctx_init_id = @statusbar.get_context_id("init")
     @ctx_offline_id = @statusbar.get_context_id("offline")
@@ -82,6 +85,7 @@ class RubySoulNG
       if @rs_config.conf[:connection_at_startup]
         connection()
       end
+      @rsng_win.resize()
       Thread.exit()
     end
     Thread.new do
@@ -159,7 +163,7 @@ class RubySoulNG
     @user_model.clear()
     @user_model_iter_offline = @user_model.append(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{@rs_contact.contacts.length})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     if @rs_contact
       @rs_contact.contacts.each do |key, value|
@@ -332,7 +336,7 @@ class RubySoulNG
       socket = response.split(' ')[1]
       login = sender.to_s
       if @user_dialogs.include?(login.to_sym)
-        @user_dialogs[login.to_sym].show_all()
+        #@user_dialogs[login.to_sym].show_all()
         @user_dialogs[login.to_sym].print_user_typing_status()
       end
       #puts "[#{sub_cmd.to_s}] : " + sender + " - " + sub_cmd + " - " + response
@@ -341,7 +345,7 @@ class RubySoulNG
       socket = response.split(' ')[1]
       login = sender.to_s
       if @user_dialogs.include?(login.to_sym)
-        @user_dialogs[login.to_sym].show_all()
+        #@user_dialogs[login.to_sym].show_all()
         @user_dialogs[login.to_sym].print_init_status()
       end
       #puts "[#{sub_cmd.to_s}] : " + sender + " - " + sub_cmd + " - " + response
@@ -379,8 +383,10 @@ class RubySoulNG
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:status] = status.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
-        @user_online += 1
+        @user_online += 1 if @rs_contact.contacts[login.to_sym][:connections].length == 1
       	print_online_status()
+      	user_offline = @rs_contact.contacts.length - @user_online
+      	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
       else
         rsng_user_view_update()
       end
@@ -413,6 +419,8 @@ class RubySoulNG
       if @rs_contact.contacts[login.to_sym][:connections].length == 1
       	@user_online += 1
       	print_online_status()
+      	user_offline = @rs_contact.contacts.length - @user_online
+      	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
         @user_model.each do |model,path,iter|
           @user_model.remove(iter) if (iter[3].to_s == login.to_s)
         end
@@ -501,6 +509,10 @@ class RubySoulNG
           @user_online -= 1
         	@user_online = 0 if @user_online < 0
       		print_online_status()
+      		if @user_online > 0
+      			user_offline = @rs_contact.contacts.length - @user_online
+      			@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
+      		end
         	@user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
@@ -592,8 +604,8 @@ class RubySoulNG
     @user_model.set_sort_column_id(3)
     @rsng_user_view.set_model(@user_model)
     renderer = Gtk::CellRendererPixbuf.new
-    renderer.set_xalign(0.5)
-    renderer.set_yalign(0.5)
+    #renderer.set_xalign(0.5)
+    #renderer.set_yalign(0.5)
     column = Gtk::TreeViewColumn.new("Status", renderer, :pixbuf => 0)
     @rsng_user_view.append_column(column)
     renderer = Gtk::CellRendererText.new
@@ -604,14 +616,14 @@ class RubySoulNG
     column.set_sizing(Gtk::TreeViewColumn::AUTOSIZE)
     @rsng_user_view.append_column(column)
     renderer = Gtk::CellRendererPixbuf.new
-    renderer.set_xalign(1.0)
-    renderer.set_yalign(0.5)
+    #renderer.set_xalign(1.0)
+    #renderer.set_yalign(0.5)
     column = Gtk::TreeViewColumn.new("Photo", renderer, :pixbuf => 2)
     column.set_sizing(Gtk::TreeViewColumn::FIXED)
     @rsng_user_view.append_column(column)
     @user_model_iter_offline = @user_model.prepend(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{@rs_contact.contacts.length})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
       if (	view.model.get_iter(path)[5].to_s.eql?("actif") or view.model.get_iter(path)[5].to_s.eql?("away") or view.model.get_iter(path)[5].to_s.eql?("busy") or view.model.get_iter(path)[5].to_s.eql?("idle") or view.model.get_iter(path)[5].to_s.eql?("lock")	)
@@ -665,7 +677,8 @@ class RubySoulNG
     @user_model.clear()
     @user_model_iter_offline = @user_model.prepend(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts</span>])
+    user_offline = @rs_contact.contacts.length - @user_online
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rs_contact.contacts.each do |key, val|
       login = key
@@ -848,15 +861,15 @@ class RubySoulNG
 
   #--- | Preferences window
   def preferences_account_init
-    @account_login_entry			= @glade['account_login_entry']
+    @account_login_entry						= @glade['account_login_entry']
     @account_socks_password_entry		= @glade['account_socks_password_entry']
     @account_unix_password_entry		= @glade['account_unix_password_entry']
     @account_server_host_entry			= @glade['account_server_host_entry']
     @account_server_port_entry			= @glade['account_server_port_entry']
     @account_connection_type_md5		= @glade['account_connection_type_md5']
     @account_connection_type_krb5		= @glade['account_connection_type_krb5']
-    @account_location_entry			= @glade['account_location_entry']
-    @account_user_group_entry			= @glade['account_user_group_entry']
+    @account_location_entry					= @glade['account_location_entry']
+    @account_user_group_entry				= @glade['account_user_group_entry']
     @account_connection_at_startup_checkbox	= @glade['account_connection_at_startup_checkbox']
   end
   def preferences_account_load_config(conf)
@@ -928,7 +941,7 @@ class RubySoulNG
     set_status(@ctx_offline_id, "You are not connected !!!")
   end
   def print_online_status
-    set_status(@ctx_online_id, "Your are online | User online : #{@user_online.to_s}")
+    set_status(@ctx_online_id, "Your are online | Online contacts : #{@user_online.to_s}")
   end
   def set_status(ctx_id, msg)
     @statusbar.pop(@ctx_current_id) if @ctx_current_id
