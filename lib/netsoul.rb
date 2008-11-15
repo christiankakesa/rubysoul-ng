@@ -3,6 +3,7 @@
 =end
 
 begin
+	require 'gtk2'
   require 'socket'
   require 'singleton'
   require 'lib/netsoul_location'
@@ -94,7 +95,7 @@ module NetSoul
     def sock_get
       if (@sock)
         response = @sock.gets
-        response = response.to_s.chomp
+        response = GLib::UTF8.normalize(response.to_s.chomp)
         return response
       end
       return ""

@@ -39,8 +39,9 @@ class RubySoulNG
     end
     @rsng_win = @glade['RubySoulNG']
     @rsng_win.set_title("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
-    @rsng_win.set_size_request(RsConfig::DEFAULT_SIZE_W, RsConfig::DEFAULT_SIZE_H)
+    @rsng_win.set_allow_grow(true)
     @rsng_win.set_allow_shrink(true)
+    @rsng_win.set_size_request(RsConfig::DEFAULT_SIZE_W, RsConfig::DEFAULT_SIZE_H)
     @rsng_tb_connect = @glade['tb_connect']
     @rsng_user_view = @glade['user_view']
     @rsng_state_box = @glade['state_box']
@@ -54,6 +55,7 @@ class RubySoulNG
     @account_unix_password_entry = @glade['account_unix_password_entry']
     @aboutdialog = @glade['aboutdialog']
     @aboutdialog.set_name(RsConfig::APP_NAME)
+    @aboutdialog.set_program_name(RsConfig::APP_NAME)
     @aboutdialog.set_version(RsConfig::APP_VERSION)
     @statusbar = @glade['statusbar']
     @ctx_init_id = @statusbar.get_context_id("init")
@@ -139,7 +141,7 @@ class RubySoulNG
         disconnection(false) #without @ns.disconnect()
         puts "Disconnected..."
         connection()
-        puts ""
+        puts "Connected..."
         Thread.exit
       end
       rsng_state_box_update()
@@ -163,7 +165,7 @@ class RubySoulNG
     @user_model.clear()
     @user_model_iter_offline = @user_model.append(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{@rs_contact.contacts.length})</span>])
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     if @rs_contact
       @rs_contact.contacts.each do |key, value|
@@ -383,10 +385,6 @@ class RubySoulNG
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:status] = status.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
         @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
-        @user_online += 1 if @rs_contact.contacts[login.to_sym][:connections].length == 1
-      	print_online_status()
-      	user_offline = @rs_contact.contacts.length - @user_online
-      	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
       else
         rsng_user_view_update()
       end
@@ -417,11 +415,7 @@ class RubySoulNG
       @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = "user_data"
       @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = "location"
       if @rs_contact.contacts[login.to_sym][:connections].length == 1
-      	@user_online += 1
-      	print_online_status()
-      	user_offline = @rs_contact.contacts.length - @user_online
-      	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
-        @user_model.each do |model,path,iter|
+      	@user_model.each do |model,path,iter|
           @user_model.remove(iter) if (iter[3].to_s == login.to_s)
         end
         @rs_contact.contacts[login.to_sym][:connections].each do |key, val|
@@ -499,6 +493,7 @@ class RubySoulNG
         end
       end
       send_cmd( NetSoul::Message.list_users(login.to_s) )
+      print_online_status()
       #puts "[login] : " + sender + " - " + sub_cmd
     when "logout"
       login = sender.to_s
@@ -506,14 +501,7 @@ class RubySoulNG
       if @rs_contact.contacts.include?(login.to_sym) && @rs_contact.contacts[login.to_sym].include?(:connections) && @rs_contact.contacts[login.to_sym][:connections].include?(socket.to_i)
         @rs_contact.contacts[login.to_sym][:connections].delete(socket.to_i)
         if @rs_contact.contacts[login.to_sym][:connections].length == 0 # delete and put at bottom
-          @user_online -= 1
-        	@user_online = 0 if @user_online < 0
-      		print_online_status()
-      		if @user_online > 0
-      			user_offline = @rs_contact.contacts.length - @user_online
-      			@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
-      		end
-        	@user_model.each do |model,path,iter|
+          @user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
           iter = @user_model.append(@user_model_iter_offline)
@@ -529,6 +517,7 @@ class RubySoulNG
           iter.set_value(5, "status")
           iter.set_value(6, "user_data")
           iter.set_value(7, "location")
+          print_online_status()
         elsif @rs_contact.contacts[login.to_sym][:connections].length == 1 # last sub element need to be root element
           @user_model.each do |model,path,iter|
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
@@ -604,26 +593,20 @@ class RubySoulNG
     @user_model.set_sort_column_id(3)
     @rsng_user_view.set_model(@user_model)
     renderer = Gtk::CellRendererPixbuf.new
-    #renderer.set_xalign(0.5)
-    #renderer.set_yalign(0.5)
     column = Gtk::TreeViewColumn.new("Status", renderer, :pixbuf => 0)
     @rsng_user_view.append_column(column)
     renderer = Gtk::CellRendererText.new
     renderer.set_alignment(Pango::ALIGN_LEFT)
-    #renderer.set_ellipsize(Pango::ELLIPSIZE_START)
-    #renderer.set_wrap-width(26)
     column = Gtk::TreeViewColumn.new("Login / Location", renderer, :markup => 1)
     column.set_sizing(Gtk::TreeViewColumn::AUTOSIZE)
     @rsng_user_view.append_column(column)
     renderer = Gtk::CellRendererPixbuf.new
-    #renderer.set_xalign(1.0)
-    #renderer.set_yalign(0.5)
     column = Gtk::TreeViewColumn.new("Photo", renderer, :pixbuf => 2)
     column.set_sizing(Gtk::TreeViewColumn::FIXED)
     @rsng_user_view.append_column(column)
     @user_model_iter_offline = @user_model.prepend(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{@rs_contact.contacts.length})</span>])
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@rs_contact.contacts.length}/#{@rs_contact.contacts.length})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
       if (	view.model.get_iter(path)[5].to_s.eql?("actif") or view.model.get_iter(path)[5].to_s.eql?("away") or view.model.get_iter(path)[5].to_s.eql?("busy") or view.model.get_iter(path)[5].to_s.eql?("idle") or view.model.get_iter(path)[5].to_s.eql?("lock")	)
@@ -677,8 +660,7 @@ class RubySoulNG
     @user_model.clear()
     @user_model_iter_offline = @user_model.prepend(nil)
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-    user_offline = @rs_contact.contacts.length - @user_online
-    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">Offline contacts (#{user_offline})</span>])
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
     @rs_contact.contacts.each do |key, val|
       login = key
@@ -745,6 +727,7 @@ class RubySoulNG
         end
       end
     end
+    print_online_status()
   end
   def rsng_state_box_init
     model = Gtk::ListStore.new(String, Gdk::Pixbuf, String)
@@ -847,6 +830,7 @@ class RubySoulNG
       h.set_value(5, "state")
       h.set_value(6, "user_data")
       h.set_value(7, "location")
+      print_online_status()
       if @ns.authenticated
         send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
         send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
@@ -941,6 +925,8 @@ class RubySoulNG
     set_status(@ctx_offline_id, "You are not connected !!!")
   end
   def print_online_status
+  	@user_online = @rs_contact.contacts.length - @user_model_iter_offline.n_children
+  	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@user_model_iter_offline.n_children.to_s}/#{@rs_contact.contacts.length})</span>])
     set_status(@ctx_online_id, "Your are online | Online contacts : #{@user_online.to_s}")
   end
   def set_status(ctx_id, msg)

@@ -8,6 +8,10 @@ authenticate in PIE (Students computer's park).
 [DEPENDS]
 ruby >= 1.8
 ruby-gnome2 
+	For kerberos yu need : ruby header, gssapi header, krb5 header
+[RUN RubySoul-NG]
+Just type : ruby rubysoul-ng.rg
+	for kerberos authentication : cd lib/kerberos && ruby extconf.rb && make && cd ../..
 
 [BUGS REPORT]
 Author :: Christian KAKESA <christian.kakesa@gmail.com>
