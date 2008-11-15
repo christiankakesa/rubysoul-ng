@@ -25,7 +25,7 @@ class RsConfig
   AUTHOR_FULLNAME = "#{AUTHOR_NAME} #{AUTHOR_FIRSTNAME}"
   AUTHOR_EMAIL = "christian.kakesa@gmail.com"
   AGENT = APP_NAME + " - V" + APP_VERSION
-  DEFAULT_SIZE_W = 290
+  DEFAULT_SIZE_W = 260
   DEFAULT_SIZE_H = 420
 
   CONFIG_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}config.yml"
