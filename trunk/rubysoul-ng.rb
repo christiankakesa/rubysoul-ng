@@ -87,7 +87,6 @@ class RubySoulNG
       if @rs_config.conf[:connection_at_startup]
         connection()
       end
-      @rsng_win.resize()
       Thread.exit()
     end
     Thread.new do
@@ -941,6 +940,6 @@ end
 if __FILE__ == $0
 Gtk.init()
 RubySoulNG.new
-Gtk.main_with_queue 100
+Gtk.main_with_queue 200
 end
 
