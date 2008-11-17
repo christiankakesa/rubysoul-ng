@@ -15,6 +15,7 @@ begin
   require 'rs_config'
   require 'rs_contact'
   require 'rs_infobox'
+  require 'rs_tooltip'
   require 'rs_dialog'
 rescue LoadError
   puts "Error: #{$!}"
@@ -28,7 +29,7 @@ class RubySoulNG
 
   def initialize
     @domain = RsConfig::APP_NAME
-    #bindtextdomain(@domain, nil, nil, "UTF-8")
+    bindtextdomain(@domain, nil, nil, "UTF-8")
     @glade = GladeXML.new(
     "#{RsConfig::APP_DIR+File::SEPARATOR}rubysoul-ng_win.glade",
     nil,
@@ -44,6 +45,7 @@ class RubySoulNG
     @rsng_win.set_size_request(RsConfig::DEFAULT_SIZE_W, RsConfig::DEFAULT_SIZE_H)
     @rsng_tb_connect = @glade['tb_connect']
     @rsng_user_view = @glade['user_view']
+    @rsng_user_view_tooltip = RsTooltip.new(@rsng_user_view)
     @rsng_state_box = @glade['state_box']
     @contact_win = @glade['contact']
     @contact_add_entry = @glade['contact_add_entry']
@@ -640,12 +642,15 @@ class RubySoulNG
     end
     @rsng_user_view_menu = Gtk::Menu.new
     @rsng_user_view_menu.append(@rsng_user_view_menu_delete)
+    @rsng_user_view.signal_connect("cursor-changed") do |*widget|
+    	#@rsng_user_view.signal_emit("button-press-event", *widget)
+    end
     @rsng_user_view.signal_connect("button-press-event") do |widget, event|
       if event.kind_of? Gdk::EventButton
         if (event.button.to_i == 3)
           path, column, x, y = @rsng_user_view.get_path_at_pos(event.x, event.y)
           iter = @user_model.get_iter(path)
-          if ( iter[8].to_s != "children" && iter[3].to_s != "zzzzzz_z" && iter && iter == @rsng_user_view.selection.selected)
+          if ( iter && iter[8].to_s != "children" && iter[3].to_s != "zzzzzz_z" && iter == @rsng_user_view.selection.selected)
             @rsng_user_view_menu.popup(nil, nil, event.button, event.time) do |menu, x, y, push_in|
               [x, y, push_in]
             end
