@@ -18,13 +18,14 @@ class RsContact
 
   def initialize(parent_win = nil)
     @parent_win = parent_win
+    @rs_config = RsConfig::instance()
     load_contacts()
-    @url_photo = RsConfig::CONTACTS_PHOTO_URL #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
+    @url_photo = @rs_config.contacts_photo_url #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
     get_users_photo()
   end
 
   def load_contacts
-    @contacts = YAML::load_file(RsConfig::CONTACTS_FILENAME)
+    @contacts = YAML::load_file(@rs_config.contacts_filename)
     if not @contacts.is_a?(Hash)
       @contacts = Hash.new
     end
@@ -45,9 +46,9 @@ class RsContact
   #--- Remove contact to the YML file.
   def remove(login, save_it = false)
     @contacts.delete(login.to_s.to_sym)
-    if FileTest.exist?(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
+    if FileTest.exist?(@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s)
       begin
-        File.delete(RsConfig::CONTACTS_PHOTO_DIR + File::SEPARATOR + login.to_s)
+        File.delete(@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s)
       rescue
         RsInfobox.new(@parent_win, "#{$!}", "warning")
       end
@@ -63,7 +64,7 @@ class RsContact
         c[k.to_s.to_sym] = Hash.new
       end
     end
-    File.open(RsConfig::CONTACTS_FILENAME, "wb") do |file|
+    File.open(@rs_config.contacts_filename, "wb") do |file|
       file.puts '#--- ! RubySoulNG contacts file'
       file.puts c.to_yaml
       file.close()
@@ -80,10 +81,7 @@ class RsContact
   end
 
   def get_users_photo
-    dest_dir = RsConfig::CONTACTS_PHOTO_DIR
-    if not (FileTest.directory?(dest_dir))
-      Dir.mkdir(dest_dir, 755)
-    end
+    dest_dir = @rs_config.contacts_photo_dir
     files = Array.new
     exclude_dir = [".", ".."]
     lf = Dir.open(dest_dir)
