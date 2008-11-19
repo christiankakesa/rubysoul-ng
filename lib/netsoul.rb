@@ -4,6 +4,7 @@
 
 begin
 	require 'gtk2'
+	require 'glib2'
   require 'socket'
   require 'singleton'
   require 'lib/netsoul_location'
@@ -85,7 +86,7 @@ module NetSoul
 
     def sock_send(string)
       if (@sock && string.to_s.length > 0)
-        @sock.puts string.to_s
+        @sock.puts GLib.locale_from_utf8(string.to_s)
         return true
       else
       	return false
@@ -95,7 +96,7 @@ module NetSoul
     def sock_get
       if (@sock)
         response = @sock.gets
-        response = GLib::UTF8.normalize(response.to_s.chomp)
+        response = GLib.locale_to_utf8(response.to_s.chomp)
         return response
       end
       return ""
