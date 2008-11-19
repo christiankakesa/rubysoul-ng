@@ -95,10 +95,8 @@ class RsDialog < Gtk::Window
       #--- | Print info in statusbar
       if @send_buffer.text.length > 1 && !@send_typing
         send_start_typing()
-        #puts "me start typing : #{@send_buffer.text.length.to_s}"
       elsif @send_buffer.text.length == 0 && @send_typing
         send_stop_typing()
-        #puts "me end typing : #{@send_buffer.text.length.to_s}"
       end
     end
     signal_connect("focus-in-event") do |widget, event|
@@ -125,7 +123,7 @@ class RsDialog < Gtk::Window
 
   def receive_msg(user_from, msg)
     begin
-    	msg = NetSoul::Message.clean_msg(msg)
+    	msg = NetSoul::Message.trim(msg)
       @dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})", @recv_foreground_time)
       @dialog_buffer.insert(@dialog_buffer.end_iter, " #{user_from.to_s}:", @recv_foreground_login)
       @dialog_buffer.insert(@dialog_buffer.end_iter, " #{msg.to_s}\n")

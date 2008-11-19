@@ -1,9 +1,8 @@
-#!/usr/bin/ruby -w
+#!/usr/bin/ruby
 =begin
   Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 	$Author$
 	$Revision$ $Date$
-  TODO: implementer une function at_exit/deconnexion pour quitter proprement netsoul si on ferme l'aaplication'
 =end
 
 $KCODE = 'u'
@@ -33,7 +32,7 @@ class RubySoulNG
   		Glib::Thread.init()
   	end
     @domain = RsConfig::APP_NAME
-    #bindtextdomain(@domain, nil, nil, "UTF-8")
+    bindtextdomain(@domain, nil, nil, "UTF-8")
     @glade = GladeXML.new(
     "#{RsConfig::APP_DIR+File::SEPARATOR}rubysoul-ng_win.glade",
     nil,
@@ -92,7 +91,6 @@ class RubySoulNG
       if @rs_config.conf[:connection_at_startup]
         connection()
       end
-      Thread.pass()
       Thread.exit()
     end
     Thread.new do
@@ -113,7 +111,6 @@ class RubySoulNG
         h.set_value(8, "children_offline")
       end
       start_thread.run();
-      Thread.pass()
       Thread.exit()
     end
   end
@@ -143,11 +140,8 @@ class RubySoulNG
           parse_cmd()
           Thread.pass()
         end
-        puts "Exit while parse_cmd()..."
         disconnection(false) #without @ns.disconnect()
-        puts "Disconnected..."
         connection()
-        puts "Connected..."
         Thread.exit()
       end
       rsng_state_box_update()
@@ -951,6 +945,6 @@ end
 if __FILE__ == $0
 Gtk.init()
 RubySoulNG.new
-Gtk.main_with_queue 200
+Gtk.main_with_queue 100
 end
 

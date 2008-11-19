@@ -20,8 +20,8 @@ class RsTooltip < Gtk::Tooltips
         path, column, x, y = @parent_widget.get_path_at_pos(event.x, event.y)
         if path
           iter = @parent_widget.model.get_iter(path)
-          if iter != @current_iter
-          	if ( iter && !iter.has_child?() )
+          if (iter && iter != @current_iter)
+          	if !iter.has_child?()
           		set_tip(@parent_widget, build_text(iter), nil)
             else
             	set_tip(@parent_widget, "", nil)
