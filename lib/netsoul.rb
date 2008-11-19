@@ -3,7 +3,6 @@
 =end
 
 begin
-	require 'gtk2'
 	require 'glib2'
   require 'socket'
   require 'singleton'
