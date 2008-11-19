@@ -110,7 +110,7 @@ class RsDialog < Gtk::Window
   def send_msg(user, msg)
     begin
       if NetSoul::Message::trim(msg.to_s).length > 0
-      	msg = NetSoul::Message.clean_msg(msg)
+      	msg = NetSoul::Message.trim(msg.to_s)
         @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
         @dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})" , @send_foreground_time)
         @dialog_buffer.insert(@dialog_buffer.end_iter, " #{@rs_config.conf[:login].to_s}:", @send_foreground_login)

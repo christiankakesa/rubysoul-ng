@@ -1,7 +1,8 @@
 #!/usr/bin/ruby -w
 =begin
   Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
-
+	$Author$
+	$Revision$ $Date$
   TODO: implementer une function at_exit/deconnexion pour quitter proprement netsoul si on ferme l'aaplication'
 =end
 
@@ -32,7 +33,7 @@ class RubySoulNG
   		Glib::Thread.init()
   	end
     @domain = RsConfig::APP_NAME
-    bindtextdomain(@domain, nil, nil, "UTF-8")
+    #bindtextdomain(@domain, nil, nil, "UTF-8")
     @glade = GladeXML.new(
     "#{RsConfig::APP_DIR+File::SEPARATOR}rubysoul-ng_win.glade",
     nil,
@@ -91,6 +92,7 @@ class RubySoulNG
       if @rs_config.conf[:connection_at_startup]
         connection()
       end
+      Thread.pass()
       Thread.exit()
     end
     Thread.new do
@@ -111,7 +113,8 @@ class RubySoulNG
         h.set_value(8, "children_offline")
       end
       start_thread.run();
-      Thread.exit
+      Thread.pass()
+      Thread.exit()
     end
   end
 
@@ -138,14 +141,14 @@ class RubySoulNG
       @parse_thread = Thread.new do
         while @ns.sock
           parse_cmd()
-          Thread.pass
+          Thread.pass()
         end
         puts "Exit while parse_cmd()..."
         disconnection(false) #without @ns.disconnect()
         puts "Disconnected..."
         connection()
         puts "Connected..."
-        Thread.exit
+        Thread.exit()
       end
       rsng_state_box_update()
       send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
@@ -161,7 +164,7 @@ class RubySoulNG
   end
   def disconnection(ns_server_too = true)
     @ns.disconnect() if ns_server_too
-    @parse_thread.exit if @parse_thread.is_a?(Thread)
+    @parse_thread.exit() if @parse_thread.is_a?(Thread)
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
     @rs_contact.load_contacts()
@@ -209,8 +212,8 @@ class RubySoulNG
         socket = buff.split(' ')[0]
         login = buff.split(' ')[1]
         status = buff.split(' ')[10].split(':')[0]
-        user_data = URI.unescape(buff.split(' ')[11])
-        location = URI.unescape(buff.split(' ')[8])
+        user_data = CGI.unescape(buff.split(' ')[11])
+        location = CGI.unescape(buff.split(' ')[8])
         if not @rs_contact.contacts[login.to_sym].is_a?(Hash)
           @rs_contact.contacts[login.to_sym] = Hash.new
         end
@@ -310,12 +313,12 @@ class RubySoulNG
       case sub_cmd.to_s
       when "mail"
         sender, subject = response.split(' ')[2..3]
-        msg = "Vous avez reçu un email !!!\nDe: " + URI.unescape(sender) + "\nSujet: " + URI.unescape(subject)[1..-2]
+        msg = "Vous avez reçu un email !!!\nDe: " + CGI.unescape(sender) + "\nSujet: " + CGI.unescape(subject)[1..-2]
         RsInfobox.new(self, msg, "info", false)
         return true
       when "host"
         sender = response.split(' ')[2]
-        msg = "Appel en en cours... !!!\nDe: " + URI.unescape(sender)[1..-1]
+        msg = "Appel en en cours... !!!\nDe: " + CGI.unescape(sender)[1..-1]
         RsInfobox.new(self, msg, "info", false)
         return true
       when "user"
@@ -355,7 +358,7 @@ class RubySoulNG
       end
       #puts "[#{sub_cmd.to_s}] : " + sender + " - " + sub_cmd + " - " + response
     when "msg"
-      msg = URI.unescape(response.split(' ')[1])
+      msg = CGI.unescape(response.split(' ')[1])
       socket = response.split(' ')[1]
       login = sender.to_s
       if not @user_dialogs.include?(login.to_sym)
@@ -373,8 +376,8 @@ class RubySoulNG
         socket = response.split(' ')[1]
         login = response.split(' ')[2]
         status = response.split(' ')[11].split(':')[0]
-        user_data = URI.unescape(response.split(' ')[12])
-        location = URI.unescape(response.split(' ')[9])
+        user_data = CGI.unescape(response.split(' ')[12])
+        location = CGI.unescape(response.split(' ')[9])
         if not @rs_contact.contacts[login.to_sym].is_a?(Hash)
           @rs_contact.contacts[login.to_sym] = Hash.new
         end
