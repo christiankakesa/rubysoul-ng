@@ -18,13 +18,15 @@ class RsTooltip < Gtk::Tooltips
     if @parent_widget
       @parent_widget.signal_connect("motion-notify-event") do |widget, event|
         path, column, x, y = @parent_widget.get_path_at_pos(event.x, event.y)
-        if path
+        if !path.nil?()
           iter = @parent_widget.model.get_iter(path)
-          if (iter && iter != @current_iter)
-          	if !iter.has_child?()
+          if (!iter.nil?() && @current_iter != iter)
+          	if (!iter.has_child?() && iter[5].to_s != "status" && iter[3].to_s != "zzzzzz_z") 
           		set_tip(@parent_widget, build_text(iter), nil)
+            elsif iter[3].to_s == "zzzzzz_z"
+            	set_tip(@parent_widget, 'Offline contacts', nil)
             else
-            	set_tip(@parent_widget, "", nil)
+            	set_tip(@parent_widget, '', nil)
             end
             @current_iter = iter
           end
@@ -33,11 +35,11 @@ class RsTooltip < Gtk::Tooltips
     end
   end
   def build_text(iter)
-    res  = "#{iter[3].to_s}\n"
+    res  = "#{iter[3].to_s.upcase()}\n"
     res += "Session   : #{iter[4].to_s}\n"
     res += "Status    : #{iter[5].to_s}\n"
     res += "User data : #{iter[6].to_s}\n"
-    res += "Location  : #{iter[7].to_s}\n"
+    res += "Location  : #{iter[7].to_s}"
     return res
   end
 end

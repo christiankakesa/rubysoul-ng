@@ -3,7 +3,9 @@
 =end
 
 begin
+	require 'glib2'
   require 'cgi'
+  require 'uri'
   require 'digest/md5'
   require 'rs_config'
   require 'rs_infobox'
@@ -37,13 +39,11 @@ module NetSoul
 		    puts "Impossible to retrieve the kerberos token !!!"
 		    return
 		  end
-		  #puts "TOKEN_B64: #{tk.token_base64}"
-		  #puts "TOKEN_B64_LENGTH: #{tk.token_base64.length.to_s}"
 		  return 'ext_user_klog %s %s %s %s %s'%[tk.token_base64.slice(0, 812), Message.escape(connection_values[:system]), Message.escape(connection_values[:location]), Message.escape(connection_values[:user_group]), Message.escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
 		end
 
 		def self.send_message(user, msg)
-		  return 'user_cmd msg_user %s msg %s'%[user, Message.escape(msg)]
+			return 'user_cmd msg_user %s msg %s'%[user, Message.escape(msg)]
 		end
 
 		def self.start_writing_to_user(user)
@@ -83,21 +83,24 @@ module NetSoul
 		end
 
 		def self.escape(str)
-		  #str = URI.escape(str)
-		  #URI.escape(str, "\ :'@~\[\]&()=*$!;,\+\/\?")
-		  return CGI.escape(str)
+		  str = GLib.convert(str, 'LATIN1', 'UTF-8')
+		  str = URI.escape(str)
+		  str = URI.escape(str, "\ :'@~\[\]&()=*$!;,\+\/\?")
+		  return str
 		end
 		
 		def self.unescape(str)
-			return CGI.unescape(str)
+			str = URI.unescape(str)
+			str = GLib.convert(str, 'UTF-8', 'LATIN1')
+			return str
 		end
 
 		def self.ltrim(str)
-		  return str.gsub(/^\s+/, '')
+		  return str.gsub(/^\ +/, '')
 		end
 
 		def self.rtrim(str)
-		  return str.gsub(/\s+$/, '')
+		  return str.gsub(/\ +$/, '')
 		end
 
 		def self.trim(str)
