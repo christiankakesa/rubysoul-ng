@@ -108,7 +108,6 @@ class RubySoulNG
         h.set_value(5, "status")
         h.set_value(6, "user_data")
         h.set_value(7, "location")
-        h.set_value(8, "children_offline")
       end
       start_thread.run();
       Thread.exit()
@@ -135,14 +134,17 @@ class RubySoulNG
     if @ns.connect()
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
+      @parse_thread.exit() if @parse_thread.is_a?(Thread)
       @parse_thread = Thread.new do
         while @ns.sock
           parse_cmd()
           Thread.pass()
         end
+        @ns.sock_close()
+        Thread.pass()
         disconnection(false) #without @ns.disconnect()
+        Thread.pass()
         connection()
-        Thread.exit()
       end
       rsng_state_box_update()
       send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
@@ -159,6 +161,9 @@ class RubySoulNG
   def disconnection(ns_server_too = true)
     @ns.disconnect() if ns_server_too
     @parse_thread.exit() if @parse_thread.is_a?(Thread)
+    @user_dialogs.each do |d|
+    	d.hide_all() if d.visible?()
+    end
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
     @rs_contact.load_contacts()
@@ -189,7 +194,12 @@ class RubySoulNG
   end
 
   def parse_cmd
-    buff = @ns.sock_get().to_s
+    begin
+     buff = @ns.sock_get().to_s
+    rescue Errno::EPIPE => e
+     RsInfobox.new(self, "#{e.inspect}", "error", false)
+     disconnection(false)
+    end
     if not (buff.length > 0)
       return
     end
@@ -206,8 +216,8 @@ class RubySoulNG
         socket = buff.split(' ')[0]
         login = buff.split(' ')[1]
         status = buff.split(' ')[10].split(':')[0]
-        user_data = CGI.unescape(buff.split(' ')[11])
-        location = CGI.unescape(buff.split(' ')[8])
+        user_data = NetSoul::Message.unescape(buff.split(' ')[11])
+        location = NetSoul::Message.unescape(buff.split(' ')[8])
         if not @rs_contact.contacts[login.to_sym].is_a?(Hash)
           @rs_contact.contacts[login.to_sym] = Hash.new
         end
@@ -261,7 +271,12 @@ class RubySoulNG
 
   def send_cmd(msg)
     @mutex_send_msg.synchronize do
-      @ns.sock_send(msg)
+    	begin
+      	@ns.sock_send(msg)
+      rescue Errno::EPIPE => e
+      	RsInfobox.new(self, "#{e.inspect}", "error", false)
+      	disconnection(false)
+      end
     end
   end
 
@@ -307,12 +322,12 @@ class RubySoulNG
       case sub_cmd.to_s
       when "mail"
         sender, subject = response.split(' ')[2..3]
-        msg = "Vous avez reçu un email !!!\nDe: " + CGI.unescape(sender) + "\nSujet: " + CGI.unescape(subject)[1..-2]
+        msg = "Vous avez reçu un email !!!\nDe: " + NetSoul::Message.unescape(sender) + "\nSujet: " + NetSoul::Message.unescape(subject)[1..-2]
         RsInfobox.new(self, msg, "info", false)
         return true
       when "host"
         sender = response.split(' ')[2]
-        msg = "Appel en en cours... !!!\nDe: " + CGI.unescape(sender)[1..-1]
+        msg = "Appel en en cours... !!!\nDe: " + NetSoul::Message.unescape(sender)[1..-1]
         RsInfobox.new(self, msg, "info", false)
         return true
       when "user"
@@ -352,7 +367,7 @@ class RubySoulNG
       end
       #puts "[#{sub_cmd.to_s}] : " + sender + " - " + sub_cmd + " - " + response
     when "msg"
-      msg = CGI.unescape(response.split(' ')[1])
+      msg = NetSoul::Message.unescape(response.split(' ')[1])
       socket = response.split(' ')[1]
       login = sender.to_s
       if not @user_dialogs.include?(login.to_sym)
@@ -370,8 +385,8 @@ class RubySoulNG
         socket = response.split(' ')[1]
         login = response.split(' ')[2]
         status = response.split(' ')[11].split(':')[0]
-        user_data = CGI.unescape(response.split(' ')[12])
-        location = CGI.unescape(response.split(' ')[9])
+        user_data = NetSoul::Message.unescape(response.split(' ')[12])
+        location = NetSoul::Message.unescape(response.split(' ')[9])
         if not @rs_contact.contacts[login.to_sym].is_a?(Hash)
           @rs_contact.contacts[login.to_sym] = Hash.new
         end

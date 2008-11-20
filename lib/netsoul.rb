@@ -3,7 +3,6 @@
 =end
 
 begin
-	require 'glib2'
   require 'socket'
   require 'singleton'
   require 'lib/netsoul_location'
@@ -83,9 +82,9 @@ module NetSoul
       @authenticated = false
     end
 
-    def sock_send(string)
-      if (@sock && string.to_s.length > 0)
-        @sock.puts GLib.locale_from_utf8(string.to_s)
+    def sock_send(str)
+      if (@sock && str.to_s.length > 0)
+        @sock.puts str.to_s.chomp
         return true
       else
       	return false
@@ -94,8 +93,7 @@ module NetSoul
 
     def sock_get
       if (@sock)
-        response = @sock.gets
-        response = GLib.locale_to_utf8(response.to_s.chomp)
+        response = @sock.gets.to_s.chomp
         return response
       end
       return ""
