@@ -85,7 +85,7 @@ module NetSoul
 		def self.escape(str)
 			str = GLib.convert(str, 'ISO-8859-15', 'UTF-8')
 		  #str = URI.escape(str)
-		  str = URI.escape(str, Regexp.new("#{URI::PATTERN::ALNUM}", false, 'N'))
+		  str = URI.escape(str, Regexp.new("#{URI::PATTERN::ALNUM}[:graph:][:punct:][:cntrl:][:print:][:blank:]", false, 'N'))
 		  #str = URI.escape(str, "\ :'@~\[\]&()=*$!;,\+\/\?")
 		  str = URI.escape(str, Regexp.new("[^#{URI::PATTERN::ALNUM}]", false, 'N'))
 		  return str
