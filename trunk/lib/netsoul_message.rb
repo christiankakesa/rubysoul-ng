@@ -83,24 +83,26 @@ module NetSoul
 		end
 
 		def self.escape(str)
-		  str = GLib.convert(str, 'LATIN1', 'UTF-8')
-		  str = URI.escape(str)
-		  str = URI.escape(str, "\ :'@~\[\]&()=*$!;,\+\/\?")
+			str = GLib.convert(str, 'ISO-8859-15', 'UTF-8')
+		  #str = URI.escape(str)
+		  str = URI.escape(str, Regexp.new("#{URI::PATTERN::ALNUM}", false, 'N'))
+		  #str = URI.escape(str, "\ :'@~\[\]&()=*$!;,\+\/\?")
+		  str = URI.escape(str, Regexp.new("[^#{URI::PATTERN::ALNUM}]", false, 'N'))
 		  return str
 		end
 		
 		def self.unescape(str)
 			str = URI.unescape(str)
-			str = GLib.convert(str, 'UTF-8', 'LATIN1')
+			str = GLib.convert(str, 'UTF-8', 'ISO-8859-15')
 			return str
 		end
 
 		def self.ltrim(str)
-		  return str.gsub(/^\ +/, '')
+		  return str.gsub(/^\s+/, '')
 		end
 
 		def self.rtrim(str)
-		  return str.gsub(/\ +$/, '')
+		  return str.gsub(/\s+$/, '')
 		end
 
 		def self.trim(str)
