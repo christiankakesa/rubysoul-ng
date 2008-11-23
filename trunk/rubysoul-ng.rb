@@ -70,7 +70,7 @@ class RubySoulNG
     @user_online = 0
     @user_dialogs = Hash.new
     @rs_config = RsConfig::instance()
-    @rs_contact = RsContact::instance(@rsng_win)
+    @rs_contact = RsContact::instance()
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
     Gtk.queue do
@@ -134,21 +134,25 @@ class RubySoulNG
     if @ns.connect()
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
-      @parse_thread.exit() if @parse_thread.is_a?(Thread)
       @parse_thread = Thread.new do
         while @ns.sock
           parse_cmd()
-          Thread.pass()
         end
-        @ns.sock_close()
-        Thread.pass()
         disconnection(false) #without @ns.disconnect()
-        Thread.pass()
         connection()
+        Thread.exit()
       end
       rsng_state_box_update()
       send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
       send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+=begin
+      @rs_contact.get_users_list().each do |t|
+      	send_cmd( NetSoul::Message.who_users(t.to_s) )
+      end
+      @rs_contact.get_users_list().each do |t|
+      	send_cmd( NetSoul::Message.watch_users(t.to_s) )
+      end
+=end
       print_online_status()
       return true
     else
@@ -655,6 +659,9 @@ class RubySoulNG
             @user_dialogs.delete(login.to_sym)
           end
           send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+          #@rs_contact.get_users_list().each do |t|
+      		#	send_cmd( NetSoul::Message.watch_users(t.to_s) )
+      		#end
         end
       end
     end
@@ -851,8 +858,16 @@ class RubySoulNG
       h.set_value(7, "location")
       print_online_status()
       if @ns.authenticated
-        send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-        send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+      	send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+      	send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+=begin
+        @rs_contact.get_users_list().each do |t|
+      		send_cmd( NetSoul::Message.who_users(t.to_s) )
+      	end
+        @rs_contact.get_users_list().each do |t|
+      		send_cmd( NetSoul::Message.watch_users(t.to_s) )
+      	end
+=end
       end
     else
       RsInfobox.new(@contact_win, "No must specify the login", "warning")
@@ -946,7 +961,7 @@ class RubySoulNG
   def print_online_status
   	@user_online = @rs_contact.contacts.length - @user_model_iter_offline.n_children
   	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@user_model_iter_offline.n_children.to_s}/#{@rs_contact.contacts.length})</span>])
-    set_status(@ctx_online_id, "Your are online | Online contacts : #{@user_online.to_s}")
+    set_status(@ctx_online_id, "Your are online | Online contacts : #{@user_online.to_s}/#{@rs_contact.contacts.length}")
   end
   def set_status(ctx_id, msg)
     @statusbar.pop(@ctx_current_id) if @ctx_current_id

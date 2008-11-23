@@ -16,8 +16,7 @@ class RsContact
 
   attr_accessor :contacts, :url_photo
 
-  def initialize(parent_win = nil)
-    @parent_win = parent_win
+  def initialize()
     @rs_config = RsConfig::instance()
     load_contacts()
     @url_photo = @rs_config.contacts_photo_url #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
@@ -35,14 +34,22 @@ class RsContact
     if not (@contacts.include?(login.to_sym))
       total_length = get_users_list().to_s.length + login.to_s.length
       if total_length <= 1022 # 1022 is limit of netsoul watch_log_user command
-      	@contacts[login.to_sym] = Hash.new
-      	save() if save_it
+        @contacts[login.to_sym] = Hash.new
+        save() if save_it
       else
-      	RsInfobox.new(@parent_win, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nThis limitation is server limit, sorry.", "warning")
+        raise(StandardError, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nThis limitation is server limit, sorry.")
       end
     end
   end
 
+=begin
+  def add(login, save_it = false)
+    if not (@contacts.include?(login.to_sym))
+      @contacts[login.to_sym] = Hash.new
+        save() if save_it
+    end
+  end
+=end
   #--- Remove contact to the YML file.
   def remove(login, save_it = false)
     @contacts.delete(login.to_s.to_sym)
@@ -60,8 +67,8 @@ class RsContact
   def save
     c = Hash.new
     if @contacts.length > 0
-      @contacts.each do |k, v|
-        c[k.to_s.to_sym] = Hash.new
+      @contacts.keys.uniq.each do |l|
+        c[l.to_s.to_sym] = Hash.new
       end
     end
     File.open(@rs_config.contacts_filename, "wb") do |file|
@@ -72,14 +79,40 @@ class RsContact
   end
 
   def get_users_list
-    @user_list = String.new
+    user_list = String.new
     @contacts.each do |k, v|
-      @user_list += k.to_s + ","
+      user_list += k.to_s + ","
     end
-    @user_list = @user_list.slice(0, @user_list.length - 1)
-    return @user_list
+    user_list = user_list.slice(0, user_list.length - 1)
+    return user_list
   end
-
+=begin
+  def get_users_list
+  	res = Array.new
+    if not @contacts.length > 0
+  		return res
+  	end
+  	user_list = @contacts.keys
+    len = user_list.length
+    if len <= 113
+    	return res.push(user_list.collect {|t| t.to_s}.join(','))
+    end
+    nb_tab = len / 113
+    0.upto(nb_tab-1) do |i|
+    	if i == 0
+    		res[i] = user_list[0..113].collect {|t| t.to_s}.join(',')
+    	else
+    		start = ((113 * i) + 1)
+    		last = ((113 * (i+1)) - 1)
+    		if last > len
+    			last = len-1
+    		end
+    		res[i] = user_list[start..last].collect {|t| t.to_s}.join(',')
+    	end
+    end
+    return res
+  end
+=end
   def get_users_photo
     dest_dir = @rs_config.contacts_photo_dir
     files = Array.new

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Fri Nov 21 01:36:21 2008 -->
+<!--Generated with glade3 3.4.5 on Sun Nov 23 01:22:55 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="RubySoulNG">
     <property name="visible">True</property>
     <property name="can_focus">True</property>
     <property name="title" translatable="yes">RubySoul-NG</property>
     <property name="window_position">GTK_WIN_POS_CENTER</property>
-    <property name="default_width">260</property>
+    <property name="default_width">290</property>
     <property name="default_height">420</property>
     <property name="icon">logo.png</property>
     <signal name="delete_event" handler="on_RubySoulNG_delete_event"/>
@@ -676,7 +676,7 @@ SUCH DAMAGE.</property>
     </child>
   </widget>
   <widget class="GtkWindow" id="ns_xfer">
-    <property name="type">GTK_WINDOW_POPUP</property>
+    <property name="destroy_with_parent">True</property>
     <property name="gravity">GDK_GRAVITY_STATIC</property>
     <child>
       <widget class="GtkVBox" id="ns_xfer_layout">

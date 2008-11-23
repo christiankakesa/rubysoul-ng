@@ -21,13 +21,13 @@ class RsConfig
   ########################
   APP_NAME = "RubySoul-NG"
   APP_DIR = "#{File.dirname(__FILE__)}"
-  APP_VERSION = "0.9.8b"
+  APP_VERSION = "0.9.9a"
   AUTHOR_NAME = "Christian"
   AUTHOR_FIRSTNAME = "KAKESA"
   AUTHOR_FULLNAME = "#{AUTHOR_NAME} #{AUTHOR_FIRSTNAME}"
   AUTHOR_EMAIL = "christian.kakesa@gmail.com"
   AGENT = APP_NAME + " - V" + APP_VERSION
-  DEFAULT_SIZE_W = 260
+  DEFAULT_SIZE_W = 290
   DEFAULT_SIZE_H = 420
 
   #CONFIG_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}config.yml"
@@ -69,11 +69,11 @@ class RsConfig
   end
   
   def my_config_home_init
-  	if not GLib.getenv('XDG_config_home')
+  	if not GLib.getenv('XDG_CONFIG_HOME')
   		config_home = GLib.home_dir+File::SEPARATOR+'.config'
   		@config_filename = config_home+File::SEPARATOR+APP_NAME.downcase()+File::SEPARATOR+'config.yml'
   	else
-  		config_home = GLib.getenv('XDG_config_home')
+  		config_home = GLib.getenv('XDG_CONFIG_HOME')
   		@config_filename = config_home+File::SEPARATOR+APP_NAME.downcase()+File::SEPARATOR+'config.yml'
   	end
   	if not FileTest.exist?(@config_filename)
@@ -92,11 +92,11 @@ class RsConfig
   end
   
   def my_data_home_init
-  	if not GLib.getenv('XDG_data_home')
+  	if not GLib.getenv('XDG_DATA_HOME')
   		data_home = GLib.home_dir+File::SEPARATOR+'.local'+File::SEPARATOR+'share'
   		@contacts_filename = data_home+File::SEPARATOR+APP_NAME.downcase()+File::SEPARATOR+'contacts.yml'
   	else
-  		config_home = GLib.getenv('XDG_data_home')
+  		config_home = GLib.getenv('XDG_DATA_HOME')
   		@contacts_filename = data_home+File::SEPARATOR+APP_NAME.downcase()+File::SEPARATOR+'contacts.yml'
   	end
   	if not FileTest.exist?(@contacts_filename)
