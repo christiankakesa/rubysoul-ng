@@ -109,11 +109,13 @@ class RsDialog < Gtk::Window
     begin
       if NetSoul::Message::trim(msg.to_s).length > 0
       	msg = NetSoul::Message.trim(msg.to_s)
-        @ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
-        @dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})" , @send_foreground_time)
-        @dialog_buffer.insert(@dialog_buffer.end_iter, " #{@rs_config.conf[:login].to_s}:", @send_foreground_login)
-        @dialog_buffer.insert(@dialog_buffer.end_iter, " #{msg.to_s}\n")
-        @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
+      	@ns.sock_send(NetSoul::Message::send_message(user.to_s, msg.to_s))
+      	msg.split(/\n/).each do |message|
+        	@dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})" , @send_foreground_time)
+        	@dialog_buffer.insert(@dialog_buffer.end_iter, " #{@rs_config.conf[:login].to_s}:", @send_foreground_login)
+        	@dialog_buffer.insert(@dialog_buffer.end_iter, " #{message.to_s}\n")
+        	@dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
+        end
       end
       @send_buffer.delete(@send_buffer.start_iter, @send_buffer.end_iter)
     rescue
@@ -124,10 +126,12 @@ class RsDialog < Gtk::Window
   def receive_msg(user_from, msg)
     begin
     	msg = NetSoul::Message.trim(msg)
-      @dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})", @recv_foreground_time)
-      @dialog_buffer.insert(@dialog_buffer.end_iter, " #{user_from.to_s}:", @recv_foreground_login)
-      @dialog_buffer.insert(@dialog_buffer.end_iter, " #{msg.to_s}\n")
-      @dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
+    	msg.split(/\n/).each do |message|
+      	@dialog_buffer.insert(@dialog_buffer.end_iter, "(#{Time.now.strftime("%H:%M:%S")})", @recv_foreground_time)
+      	@dialog_buffer.insert(@dialog_buffer.end_iter, " #{user_from.to_s}:", @recv_foreground_login)
+      	@dialog_buffer.insert(@dialog_buffer.end_iter, " #{message.to_s}\n")
+      	@dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
+      end
     rescue
       RsInfobox.new(self, "#{$!}", "error")
     end

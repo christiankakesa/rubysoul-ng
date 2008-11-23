@@ -79,7 +79,6 @@ module NetSoul
     def disconnect
       sock_send(Message.ns_exit())
       sock_close()
-      @authenticated = false
     end
 
     def sock_send(str)
@@ -102,9 +101,9 @@ module NetSoul
     def sock_close
       if (@sock)
         @sock.close()
-        @sock = nil
-        @authenticated = false
       end
+      @sock = nil
+      @authenticated = false
     end
 
     def get_server_timestamp

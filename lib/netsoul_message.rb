@@ -43,7 +43,7 @@ module NetSoul
 		end
 
 		def self.send_message(user, msg)
-			return 'user_cmd msg_user %s msg %s'%[user, Message.escape(msg)]
+			return 'user_cmd msg_user %s msg %s'%[user, Message.escape(msg.to_s)]
 		end
 
 		def self.start_writing_to_user(user)
@@ -67,11 +67,11 @@ module NetSoul
 		end
 
 		def self.set_state(state, timestamp)
-		  return 'user_cmd state %s:%s'%[state.to_s, timestamp.to_s]
+		  return 'user_cmd state %s:%s'%[state, timestamp]
 		end
 
 		def self.set_user_data(data)
-		  return 'user_cmd user_data %s'%[Message.escape(data)]
+		  return 'user_cmd user_data %s'%[Message.escape(data.to_s)]
 		end
 
 		def self.ping
@@ -98,16 +98,16 @@ module NetSoul
 		end
 
 		def self.ltrim(str)
-		  return str.gsub(/^\s+/, '')
+		  return str.to_s.gsub(/^\s+/, '')
 		end
 
 		def self.rtrim(str)
-		  return str.gsub(/\s+$/, '')
+		  return str.to_s.gsub(/\s+$/, '')
 		end
 
 		def self.trim(str)
-		  str = Message.ltrim(str)
-		  str = Message.rtrim(str)
+		  str = Message.ltrim(str.to_s)
+		  str = Message.rtrim(str.to_s)
 		  return str
 		end
   end
