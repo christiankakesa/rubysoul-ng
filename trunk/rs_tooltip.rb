@@ -27,10 +27,12 @@ class RsTooltip < Gtk::Tooltips
             elsif (iter.has_child?() && iter.parent().nil?() && iter[3].to_s != "zzzzzz_z")
             	child = iter.first_child
           		set_tip(@parent_widget, build_all_text(child), nil)
+            elsif (!iter.parent().nil?() && iter[5].to_s != "status")
+            	set_tip(@parent_widget, build_text(iter), nil)
             elsif iter[3].to_s == "zzzzzz_z"
             	set_tip(@parent_widget, 'Offline contacts', nil)
             else
-            	set_tip(@parent_widget, "#{iter[3].to_s.upcase}", nil)
+            	set_tip(@parent_widget, "Offline contact: #{iter[3].to_s.upcase}", nil)
             end
             @current_iter = iter
           end

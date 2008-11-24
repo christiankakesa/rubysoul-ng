@@ -10,6 +10,7 @@ $KCODE = 'u'
 begin
   require 'libglade2'
   require 'thread'
+  require 'ftools'
   require 'fix_gtk'
   require 'lib/netsoul'
   require 'rs_config'
@@ -28,9 +29,9 @@ class RubySoulNG
   attr :glade
 
   def initialize
-  	if not GLib::Thread.supported?()
-  		Glib::Thread.init()
-  	end
+    if not GLib::Thread.supported?()
+      Glib::Thread.init()
+    end
     @domain = RsConfig::APP_NAME
     bindtextdomain(@domain, nil, nil, "UTF-8")
     @glade = GladeXML.new(
@@ -48,7 +49,7 @@ class RubySoulNG
     @rsng_win.set_size_request(RsConfig::DEFAULT_SIZE_W, RsConfig::DEFAULT_SIZE_H)
     @rsng_tb_connect = @glade['tb_connect']
     @rsng_user_view = @glade['user_view']
-    @rsng_user_view_tooltip = RsTooltip.new(@rsng_user_view)
+    #@rsng_user_view_tooltip = RsTooltip.new(@rsng_user_view)
     @rsng_state_box = @glade['state_box']
     @contact_win = @glade['contact']
     @contact_add_entry = @glade['contact_add_entry']
@@ -67,6 +68,7 @@ class RubySoulNG
     @ctx_online_id = @statusbar.get_context_id("online")
     @ctx_current_id = @ctx_init_id
     print_init_status()
+    @xfer_files_recv = Hash.new
     @user_online = 0
     @user_dialogs = Hash.new
     @rs_config = RsConfig::instance()
@@ -156,9 +158,11 @@ class RubySoulNG
       print_online_status()
       return true
     else
-      RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server.\n\t- Try to reconnect.", "error", false)
-      @preferences_win.show_all()
-      @preferences_nbook.set_page(0)
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server.\n\t- Try to reconnect.", "error", false)
+        @preferences_win.show_all()
+        @preferences_nbook.set_page(0)
+      end
       return false
     end
   end
@@ -166,7 +170,7 @@ class RubySoulNG
     @ns.disconnect() if ns_server_too
     @parse_thread.exit() if @parse_thread.is_a?(Thread)
     @user_dialogs.each do |d|
-    	d.hide_all() if d.visible?()
+      d.hide_all() if d.visible?()
     end
     @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rsng_tb_connect.set_label("Connection")
@@ -199,10 +203,12 @@ class RubySoulNG
 
   def parse_cmd
     begin
-     buff = @ns.sock_get().to_s
+      buff = @ns.sock_get().to_s
     rescue Errno::EPIPE => e
-     RsInfobox.new(self, "#{e.inspect}", "error", false)
-     disconnection(false)
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, "#{e.inspect}", "error", false)
+        disconnection(false)
+      end
     end
     if not (buff.length > 0)
       return
@@ -275,11 +281,13 @@ class RubySoulNG
 
   def send_cmd(msg)
     @mutex_send_msg.synchronize do
-    	begin
-      	@ns.sock_send(msg)
+      begin
+        @ns.sock_send(msg)
       rescue Errno::EPIPE => e
-      	RsInfobox.new(self, "#{e.inspect}", "error", false)
-      	disconnection(false)
+        Gtk.queue do
+          RsInfobox.new(@rsng_win, "#{e.inspect}", "error", false)
+          disconnection(false)
+        end
       end
     end
   end
@@ -304,12 +312,18 @@ class RubySoulNG
       #watch_log too long
     when "033"
       #Login or password incorrect
-      RsInfobox.new(self, "Login or password incorrect", "warning")
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, "Login or password incorrect", "warning")
+      end
     when "131"
       #Permision denied
-      RsInfobox.new(self, "Permision denied", "warning")
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, "Permision denied", "warning")
+      end
     when "140"
-      RsInfobox.new(self, "User identification failed", "warning")
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, "User identification failed", "warning")
+      end
     else
       #puts "Something is wrong in \"REP\" command response..."
       #puts '[Response not Yet implemented] %s'%[cmd.to_s]
@@ -319,32 +333,30 @@ class RubySoulNG
   end
 
   def user_cmd(usercmd)
-    begin
-      cmd, user	= NetSoul::Message.trim(usercmd.split('|')[0]).split(' ')
-      response	= NetSoul::Message.trim(usercmd.split('|')[1])
-      sub_cmd	= NetSoul::Message.trim(user.split(':')[1])
-      case sub_cmd.to_s
-      when "mail"
-        sender, subject = response.split(' ')[2..3]
-        msg = "Vous avez reçu un email !!!\nDe: " + NetSoul::Message.unescape(sender) + "\nSujet: " + NetSoul::Message.unescape(subject)[1..-2]
-        RsInfobox.new(self, msg, "info", false)
-        return true
-      when "host"
-        sender = response.split(' ')[2]
-        msg = "Appel en en cours... !!!\nDe: " + NetSoul::Message.unescape(sender)[1..-1]
-        RsInfobox.new(self, msg, "info", false)
-        return true
-      when "user"
-        get_user_response(cmd, user, response)
-        return true
-      else
-        #puts "[user_cmd] : " + usercmd + " - This command is not parsed, please contacte the developper"
-        return false
+    cmd, user	= NetSoul::Message.trim(usercmd.split('|')[0]).split(' ')
+    response	= NetSoul::Message.trim(usercmd.split('|')[1])
+    sub_cmd	= NetSoul::Message.trim(user.split(':')[1])
+    case sub_cmd.to_s
+    when "mail"
+      sender, subject = response.split(' ')[2..3]
+      msg = "Vous avez reçu un email !!!\nDe: " + NetSoul::Message.unescape(sender) + "\nSujet: " + NetSoul::Message.unescape(subject)[1..-2]
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, msg, "info", false)
       end
-    rescue
-      RsInfobox.new(self, "#{$!}", "warning")
-      disconnection()
-      connection()
+      return true
+    when "host"
+      sender = response.split(' ')[2]
+      msg = "Appel en en cours... !!!\nDe: " + NetSoul::Message.unescape(sender)[1..-1]
+      Gtk.queue do
+        RsInfobox.new(@rsng_win, msg, "info", false)
+      end
+      return true
+    when "user"
+      get_user_response(cmd, user, response)
+      return true
+    else
+      #puts "[user_cmd] : " + usercmd + " - This command is not parsed, please contacte the developper"
+      return false
     end
   end
 
@@ -352,6 +364,8 @@ class RubySoulNG
     sender = user.split(":")[3].split('@')[0]
     sub_cmd = response.split(' ')[0]
     case sub_cmd
+    when "desoul_ns_xfer", "xfer", "desoul_ns_xfer_accept", "xfer_accept", "desoul_ns_xfer_data", "xfer_data", "desoul_ns_xfer_cancel", "xfer_cancel"
+      xfer_process_recv(sub_cmd.to_s, user.to_s, response.to_s.split(' ')[1])
     when "dotnetSoul_UserTyping", "typing_start"
       #| dotnetSoul_UserTyping null dst=kakesa_c
       socket = response.split(' ')[1]
@@ -438,7 +452,7 @@ class RubySoulNG
       @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = "user_data"
       @rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = "location"
       if @rs_contact.contacts[login.to_sym][:connections].length == 1
-      	@user_model.each do |model,path,iter|
+        @user_model.each do |model,path,iter|
           @user_model.remove(iter) if (iter[3].to_s == login.to_s)
         end
         @rs_contact.contacts[login.to_sym][:connections].each do |key, val|
@@ -576,6 +590,109 @@ class RubySoulNG
       return true
     end
   end
+
+  def xfer_process_recv(cmd, user, response)
+    socket = user.to_s.split(':')[0]
+    socket = ":#{socket.to_s}"
+    login = user.split(":")[3].split('@')[0]
+    response = URI.unescape(response)
+    case cmd.to_s
+    when "xfer", "desoul_ns_xfer"
+      xfer_recv(socket, login, response)
+    when "xfer_accept", "desoul_ns_xfer_accept"
+      xfer_accept_recv(socket, response)
+    when "xfer_data", "desoul_ns_xfer_data"
+      Thread.new do
+      	@xfer_files_recv[response.split(' ')[0].to_s][:mutex].synchronize {
+      		xfer_data_recv(socket, response)
+      	}
+      end
+    when "xfer_cancel", "desoul_ns_xfer_cancel"
+      xfer_cancel_recv(socket, response)
+    end
+  end
+
+  def xfer_recv(socket, login, response)
+  	Gtk.queue do
+      dialog = Gtk::Dialog.new("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}", @rsng_win,
+      Gtk::Dialog::DESTROY_WITH_PARENT,
+      [Gtk::Stock::CANCEL, Gtk::Dialog::RESPONSE_REJECT],
+      [Gtk::Stock::OK, Gtk::Dialog::RESPONSE_ACCEPT])
+      dialog.vbox.add(Gtk::Label.new("#{login.to_s} try to send you this file : #{NetSoul::Message.unescape(response.to_s.split(' ')[1])}"))
+      dialog.show_all()
+      dialog.run do |resp|
+        case resp
+        when Gtk::Dialog::RESPONSE_ACCEPT
+          id, filename, size, desc = response.to_s.split(' ')[0..3]
+          filename = NetSoul::Message.unescape(filename.to_s)
+          desc = NetSoul::Message.unescape(desc.to_s)
+          send_cmd( NetSoul::Message.xfer_accept(socket.to_s, id.to_s) )
+          @xfer_files_recv[id.to_s] = Hash.new
+          @xfer_files_recv[id.to_s][:filename] = filename.to_s
+          @xfer_files_recv[id.to_s][:total_size] = size.to_i
+          @xfer_files_recv[id.to_s][:size] = 0
+          @xfer_files_recv[id.to_s][:desc] = desc.to_s
+          @xfer_files_recv[id.to_s][:mutex] = Mutex.new
+          begin
+            homedir = ENV['HOME'] || ENV['HOMEDRIVE'] + ENV['HOMEPATH'] || ENV['USERPROFILE']
+            filepath = homedir + File::SEPARATOR + filename.to_s
+            @xfer_files_recv[id.to_s][:filepath] = filepath
+            if not (FileTest.exist?(filepath))
+              @xfer_files_recv[id.to_s][:fd] = File.new(filepath, "wb")
+            else
+            	@xfer_files_recv.delete(id.to_s)
+              Gtk.queue do
+                RsInfobox.new(@rsng_win, "File: #{filepath} already exist", "warning", false)
+              end
+            end
+          rescue
+            Gtk.queue do
+              RsInfobox.new(@rsng_win, "#{$!}", "error", false)
+            end
+          end
+        end
+        dialog.destroy
+      end
+    end
+  end
+
+  def xfer_accept_recv(socket, response)
+    Gtk.queue do
+      RsInfobox.new(@rsng_win, "Receive xfer request from #{user.to_s}\n#{response.to_s}", "info", false)
+    end
+  end
+
+  def xfer_data_recv(socket, response) 	
+    		begin
+					id = response.to_s.split(' ')[0]
+    			data = Base64.decode64(URI.unescape(response.to_s.split(' ')[1]))
+    			@xfer_files_recv[id.to_s][:fd].print(data)
+					@xfer_files_recv[id.to_s][:size] += data.length
+				  if @xfer_files_recv[id.to_s][:size] == @xfer_files_recv[id.to_s][:total_size]
+				    @xfer_files_recv[id.to_s][:fd].close()
+				    @xfer_files_recv.delete(id.to_s)
+				  else
+				    puts "#{@xfer_files_recv[id.to_s][:size].to_s}/#{@xfer_files_recv[id.to_s][:total_size].to_s}"
+				  end
+				rescue
+				  puts "Error: #{$!}"
+				end
+  end
+
+  def xfer_cancel_recv(socket, response)
+    id = response.to_s
+    if @xfer_files_recv.include?(id.to_s)
+      begin
+        @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
+        File.delete(@xfer_files_recv[id.to_s][:filepath]) if FileTest.exist?(@xfer_files_recv[id.to_s][:filepath])
+      rescue
+        Gtk.queue do
+          RsInfobox.new(@rsng_win, "#{$!}", "error", false)
+        end
+      end
+    end
+  end
+
   #--- | Main window
   def on_RubySoulNG_delete_event(widget, event)
     begin
@@ -660,8 +777,8 @@ class RubySoulNG
           end
           send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
           #@rs_contact.get_users_list().each do |t|
-      		#	send_cmd( NetSoul::Message.watch_users(t.to_s) )
-      		#end
+          #	send_cmd( NetSoul::Message.watch_users(t.to_s) )
+          #end
         end
       end
     end
@@ -858,8 +975,8 @@ class RubySoulNG
       h.set_value(7, "location")
       print_online_status()
       if @ns.authenticated
-      	send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-      	send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+        send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+        send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
 =begin
         @rs_contact.get_users_list().each do |t|
       		send_cmd( NetSoul::Message.who_users(t.to_s) )
@@ -931,7 +1048,7 @@ class RubySoulNG
     ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dll")
     @rs_config.conf[:connection_type] = @account_connection_type_krb5.active?() && ns_token_found ? "krb5" : "md5"
     if @account_connection_type_krb5.active?() && !ns_token_found
-    	RsInfobox.new(@rsng_win, "NsToken is not build for kerberos authentication, MD5 authentication selected", "warning")
+      RsInfobox.new(@rsng_win, "NsToken is not build for kerberos authentication, MD5 authentication selected", "warning")
     end
     @rs_config.conf[:location] = @account_location_entry.text.to_s if @account_location_entry.text.length > 0
     @rs_config.conf[:user_group] = @account_user_group_entry.text.to_s if @account_user_group_entry.text.length > 0
@@ -959,8 +1076,8 @@ class RubySoulNG
     set_status(@ctx_offline_id, "You are not connected !!!")
   end
   def print_online_status
-  	@user_online = @rs_contact.contacts.length - @user_model_iter_offline.n_children
-  	@user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@user_model_iter_offline.n_children.to_s}/#{@rs_contact.contacts.length})</span>])
+    @user_online = @rs_contact.contacts.length - @user_model_iter_offline.n_children
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@user_model_iter_offline.n_children.to_s}/#{@rs_contact.contacts.length})</span>])
     set_status(@ctx_online_id, "Your are online | Online contacts : #{@user_online.to_s}/#{@rs_contact.contacts.length}")
   end
   def set_status(ctx_id, msg)
@@ -973,8 +1090,8 @@ end
 ### MAIN APPLICATION ###
 ########################
 if __FILE__ == $0
-Gtk.init()
-RubySoulNG.new
-Gtk.main_with_queue 100
+  Gtk.init()
+  RubySoulNG.new
+  Gtk.main_with_queue 100
 end
 
