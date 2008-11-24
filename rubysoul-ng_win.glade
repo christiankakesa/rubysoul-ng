@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
-<!--Generated with glade3 3.4.5 on Sun Nov 23 01:22:55 2008 -->
+<!--Generated with glade3 3.4.5 on Sun Nov 23 21:54:28 2008 -->
 <glade-interface>
   <widget class="GtkWindow" id="RubySoulNG">
     <property name="visible">True</property>
@@ -669,66 +669,6 @@ SUCH DAMAGE.</property>
             </child>
           </widget>
           <packing>
-            <property name="position">1</property>
-          </packing>
-        </child>
-      </widget>
-    </child>
-  </widget>
-  <widget class="GtkWindow" id="ns_xfer">
-    <property name="destroy_with_parent">True</property>
-    <property name="gravity">GDK_GRAVITY_STATIC</property>
-    <child>
-      <widget class="GtkVBox" id="ns_xfer_layout">
-        <property name="visible">True</property>
-        <child>
-          <widget class="GtkScrolledWindow" id="ns_xfer_scroll_download">
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
-            <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
-            <child>
-              <widget class="GtkTreeView" id="ns_xfer_downloadlist">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-              </widget>
-            </child>
-          </widget>
-        </child>
-        <child>
-          <widget class="GtkHBox" id="ns_xfer_layout_bottom">
-            <property name="visible">True</property>
-            <child>
-              <widget class="GtkButton" id="ns_xfer_clear">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="label" translatable="yes">gtk-clear</property>
-                <property name="use_stock">True</property>
-                <property name="response_id">0</property>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-              </packing>
-            </child>
-            <child>
-              <widget class="GtkEntry" id="ns_xfer_search">
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="max_length">128</property>
-                <property name="text" translatable="yes">recherche...</property>
-              </widget>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="pack_type">GTK_PACK_END</property>
-                <property name="position">1</property>
-              </packing>
-            </child>
-          </widget>
-          <packing>
-            <property name="expand">False</property>
             <property name="position">1</property>
           </packing>
         </child>

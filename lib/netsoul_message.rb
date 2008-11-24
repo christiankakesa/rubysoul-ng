@@ -7,6 +7,7 @@ begin
   require 'cgi'
   require 'uri'
   require 'digest/md5'
+  require 'base64'
   require 'rs_config'
   require 'rs_infobox'
 rescue LoadError
@@ -72,6 +73,38 @@ module NetSoul
 
 		def self.set_user_data(data)
 		  return 'user_cmd user_data %s'%[Message.escape(data.to_s)]
+		end
+		
+		def self.xfer(user, id, filename, size, desc)
+				return 'user_cmd msg_user %s desoul_ns_xfer %s'%[user.to_s, id.to_s, Message.escape(filename.to_s), size.to_s, Message.escape(desc.to_s)]
+		end
+		
+		def self.desoul_ns_xfer(user, id, filename, size, desc)
+				return 'user_cmd msg_user %s desoul_ns_xfer %s'%[user.to_s, Message.escape("#{id.to_s} #{filename.to_s} #{size.to_s} #{desc.to_s}")]
+		end
+		
+		def self.xfer_accept(user, id)
+				return 'user_cmd msg_user %s desoul_ns_xfer_accept %s'%[user.to_s, id.to_s]
+		end
+		
+		def self.desoul_ns_xfer_accept(id)
+				return 'user_cmd msg_user %s desoul_ns_xfer_accept %s'%[user.to_s, id.to_s]
+		end
+		
+		def self.xfer_data(id, data)
+				return 'user_cmd msg_user %s desoul_ns_xfer_data %s'%[user.to_s, Message.escape("#{id.to_s} #{Base64.b64encode(data.to_s, data.to_s.length)}")]
+		end
+		
+		def self.desoul_ns_xfer_data(id, data)
+				return 'user_cmd msg_user %s desoul_ns_xfer_data %s'%[user.to_s, Message.escape("#{id.to_s} #{Base64.b64encode(data.to_s, data.to_s.length)}")]
+		end
+		
+		def self.xfer_cancel(user, id)
+				return 'user_cmd msg_user %s desoul_ns_xfer_cancel %s'%[user.to_s, id.to_s]
+		end
+		
+		def self.desoul_ns_xfer_cancel(id)
+				return 'user_cmd msg_user %s desoul_ns_xfer_cancel %s'%[user.to_s, id.to_s]
 		end
 
 		def self.ping
