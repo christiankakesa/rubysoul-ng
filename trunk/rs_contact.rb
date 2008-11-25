@@ -42,14 +42,6 @@ class RsContact
     end
   end
 
-=begin
-  def add(login, save_it = false)
-    if not (@contacts.include?(login.to_sym))
-      @contacts[login.to_sym] = Hash.new
-        save() if save_it
-    end
-  end
-=end
   #--- Remove contact to the YML file.
   def remove(login, save_it = false)
     @contacts.delete(login.to_s.to_sym)
@@ -86,33 +78,7 @@ class RsContact
     user_list = user_list.slice(0, user_list.length - 1)
     return user_list
   end
-=begin
-  def get_users_list
-  	res = Array.new
-    if not @contacts.length > 0
-  		return res
-  	end
-  	user_list = @contacts.keys
-    len = user_list.length
-    if len <= 113
-    	return res.push(user_list.collect {|t| t.to_s}.join(','))
-    end
-    nb_tab = len / 113
-    0.upto(nb_tab-1) do |i|
-    	if i == 0
-    		res[i] = user_list[0..113].collect {|t| t.to_s}.join(',')
-    	else
-    		start = ((113 * i) + 1)
-    		last = ((113 * (i+1)) - 1)
-    		if last > len
-    			last = len-1
-    		end
-    		res[i] = user_list[start..last].collect {|t| t.to_s}.join(',')
-    	end
-    end
-    return res
-  end
-=end
+
   def get_users_photo
     dest_dir = @rs_config.contacts_photo_dir
     files = Array.new

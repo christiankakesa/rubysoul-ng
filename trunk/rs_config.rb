@@ -29,6 +29,7 @@ class RsConfig
   AGENT = APP_NAME + " - V" + APP_VERSION
   DEFAULT_SIZE_W = 290
   DEFAULT_SIZE_H = 420
+  FILE_BUFFER_SIZE = 2048
 
   #CONFIG_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}config.yml"
   #CONTACTS_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts.yml"

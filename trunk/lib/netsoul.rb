@@ -28,7 +28,7 @@ module NetSoul
 
     def connect
     	@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-      if (!@sock)
+      if not @sock
         return false
       end
       buf = sock_get()
@@ -57,13 +57,9 @@ module NetSoul
       end
 
       if (@rs_config.conf[:connection_type].to_s == "krb5")
-        if not sock_send(Message.kerberos_authentication(@connection_values))
-        	return false
-        end
+        sock_send(Message.kerberos_authentication(@connection_values))
       else
-        if not sock_send(Message.standard_authentication(@connection_values))
-        	return false
-        end
+        sock_send(Message.standard_authentication(@connection_values))
       end
 
       rep = sock_get()
@@ -82,26 +78,15 @@ module NetSoul
     end
 
     def sock_send(str)
-      if (@sock && str.to_s.length > 0)
-        @sock.puts str.to_s.chomp
-        return true
-      else
-      	return false
-      end
+      @sock.puts str.to_s.chomp
     end
 
     def sock_get
-      if (@sock)
-        response = @sock.gets.to_s.chomp
-        return response
-      end
-      return ""
+        return @sock.gets.to_s.chomp
     end
 
     def sock_close
-      if (@sock)
-        @sock.close()
-      end
+      @sock.close()
       @sock = nil
       @authenticated = false
     end
