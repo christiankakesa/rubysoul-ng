@@ -243,7 +243,7 @@ class RubySoulNG
     when "user_cmd"
       Thread.new do
         user_cmd(buff)
-        Thread.exit()
+        #Thread.exit()
       end
       return
     else
