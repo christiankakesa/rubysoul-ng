@@ -81,12 +81,12 @@ module NetSoul
       @sock.puts str.to_s.chomp
     end
 
-    def sock_get
-        return @sock.gets.to_s.chomp
+    def sock_get()
+        return @sock.gets
     end
 
     def sock_close
-      @sock.close()
+      @sock.close() if @sock
       @sock = nil
       @authenticated = false
     end
