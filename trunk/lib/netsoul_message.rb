@@ -4,10 +4,9 @@
 
 begin
 	require 'glib2'
-  require 'cgi'
+	require 'base64'
   require 'uri'
   require 'digest/md5'
-  require 'base64'
   require 'rs_config'
   require 'rs_infobox'
 rescue LoadError
@@ -116,7 +115,7 @@ module NetSoul
 		end
 
 		def self.escape(str)
-			str = GLib.convert(str, 'ISO-8859-15', 'UTF-8')
+			str = GLib.convert(str, 'ISO-8859-15//TRANSLIT', 'UTF-8//TRANSLIT')
 		  str = URI.escape(str, Regexp.new("#{URI::PATTERN::ALNUM}[:graph:][:punct:][:cntrl:][:print:][:blank:]", false, 'N'))
 		  str = URI.escape(str, Regexp.new("[^#{URI::PATTERN::ALNUM}]", false, 'N'))
 		  return str
@@ -124,7 +123,7 @@ module NetSoul
 		
 		def self.unescape(str)
 			str = URI.unescape(str)
-			str = GLib.convert(str, 'UTF-8', 'ISO-8859-15')
+			str = GLib.convert(str, 'UTF-8//TRANSLIT', 'ISO-8859-15//TRANSLIT')
 			return str
 		end
 

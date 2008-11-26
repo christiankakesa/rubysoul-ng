@@ -8,6 +8,8 @@
 $KCODE = 'u'
 
 begin
+	require 'glib2'
+	require 'kconv'
   require 'libglade2'
   require 'thread'
   require 'ftools'
@@ -29,9 +31,9 @@ class RubySoulNG
   attr :glade
 
   def initialize
-    if not GLib::Thread.supported?()
-      Glib::Thread.init()
-    end
+    #if not GLib::Thread.supported?()
+    #  Glib::Thread.init()
+    #end
     @domain = RsConfig::APP_NAME
     bindtextdomain(@domain, nil, nil, "UTF-8")
     @glade = GladeXML.new(
@@ -177,9 +179,10 @@ class RubySoulNG
     @xfer_files_recv.clear()
     @xfer_files_send.clear()
     @parse_thread.exit() if @parse_thread.is_a?(Thread)
-    #@user_dialogs.each do |d|
-    #  d.hide_all() if d.visible?()
-    #end
+    @user_dialogs.each do |user, dialog|
+      dialog.destroy()
+    end
+    @user_dialogs.clear()
     Gtk.queue do
       @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
       @rsng_tb_connect.set_label("Connection")
@@ -194,8 +197,8 @@ class RubySoulNG
       @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
       @user_model_iter_offline.set_value(3, "zzzzzz_z")
     end
-    if @rs_contact
-      Thread.new do
+    Gtk.queue do
+      if @rs_contact
         @rs_contact.contacts.each do |key, value|
           h = @user_model.append(@user_model_iter_offline)
           h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
@@ -211,14 +214,13 @@ class RubySoulNG
           h.set_value(6, "user_data")
           h.set_value(7, "location")
         end
-        Thread.exit()
       end
-      Gtk.queue do
-        @rsng_state_box.set_sensitive(false)
-      end
-      Gtk.queue do
-        print_offline_status()
-      end
+    end
+    Gtk.queue do
+      @rsng_state_box.set_sensitive(false)
+    end
+    Gtk.queue do
+      print_offline_status()
     end
   end
 
@@ -619,12 +621,7 @@ class RubySoulNG
       xfer_accept_recv(socket, response)
     when "desoul_ns_xfer_data"
       if @xfer_files_recv.include?(response.split(' ')[0].to_s)
-        Thread.new do
-          @xfer_files_recv[response.split(' ')[0].to_s][:mutex].synchronize {
-            xfer_data_recv(socket, response)
-          }
-          Thread.exit()
-        end
+      	xfer_data_recv(socket, response)
       end
     when "desoul_ns_xfer_cancel"
       xfer_cancel_recv(socket, response)
@@ -657,7 +654,7 @@ class RubySoulNG
               @xfer_files_recv[id.to_s][:filename] = filename.to_s
               @xfer_files_recv[id.to_s][:total_size] = size.to_i
               @xfer_files_recv[id.to_s][:size] = 0
-              @xfer_files_recv[id.to_s][:buffer] = nil
+              @xfer_files_recv[id.to_s][:buffer] = ""
               @xfer_files_recv[id.to_s][:total_buffer_size] = 0
               @xfer_files_recv[id.to_s][:desc] = desc.to_s
               @xfer_files_recv[id.to_s][:mutex] = Mutex.new
@@ -692,25 +689,27 @@ class RubySoulNG
   def xfer_data_recv(socket, response)
     begin
       id = response.to_s.split(' ')[0]
-      @xfer_files_recv[id.to_s][:buffer] = response.to_s.split(' ')[1].to_s.chomp.unpack("m").to_s
-      if (	@xfer_files_recv[id.to_s][:buffer].length >= RsConfig::FILE_BUFFER_SIZE ||
-      		@xfer_files_recv[id.to_s][:total_size] <= RsConfig::FILE_BUFFER_SIZE	)
-        @xfer_files_recv[id.to_s][:fd].write_nonblock(@xfer_files_recv[id.to_s][:buffer])
-        @xfer_files_recv[id.to_s][:size] += @xfer_files_recv[id.to_s][:buffer].length
-        @xfer_files_recv[id.to_s][:buffer] = nil
-      end
-      percent = @xfer_files_recv[id.to_s][:size].to_i * 100 / @xfer_files_recv[id.to_s][:total_size].to_i
-      $stdout << "\rcurrent size : #{@xfer_files_recv[id.to_s][:size]} - total size #{@xfer_files_recv[id.to_s][:total_size]} - #{percent}%"
-      $stdout.flush
-      if @xfer_files_recv[id.to_s][:size] >= @xfer_files_recv[id.to_s][:total_size]
-        @xfer_files_recv[id.to_s][:fd].close()
-        @xfer_files_recv.delete(id.to_s)
-        print "\nOK !!!\n"
+      data = response.to_s.split(' ')[1]
+      data = data.unpack("m").to_s.chomp
+      @xfer_files_recv[id.to_s][:buffer] = data
+      Thread.new do
+      	@xfer_files_recv[id.to_s][:mutex].synchronize {
+      		@xfer_files_recv[id.to_s][:size] += @xfer_files_recv[id.to_s][:fd].write_nonblock(@xfer_files_recv[id.to_s][:buffer])
+      		#percent = @xfer_files_recv[id.to_s][:size].to_i * 100 / @xfer_files_recv[id.to_s][:total_size].to_i
+				  #$stdout << "\r#{percent}%"
+				  #$stdout.flush
+				  if @xfer_files_recv[id.to_s][:size].to_i >= @xfer_files_recv[id.to_s][:total_size].to_i
+				    @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
+				    @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
+				    #print "\nOK !!!\n"
+				  end
+      	}
+        #Thread.exit()
       end
     rescue
       puts "Error: #{$!}"
-      @xfer_files_recv[id.to_s][:fd].close()
-      @xfer_files_recv.delete(id.to_s)
+      @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
+      @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
     end
   end
 
