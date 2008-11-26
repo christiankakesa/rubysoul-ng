@@ -8,8 +8,8 @@
 $KCODE = 'u'
 
 begin
-	require 'glib2'
-	require 'kconv'
+  require 'glib2'
+  require 'kconv'
   require 'libglade2'
   require 'thread'
   require 'ftools'
@@ -77,6 +77,7 @@ class RubySoulNG
     @rs_contact = RsContact::instance()
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
+    @mutex_parse = Mutex.new
     Gtk.queue do
       rsng_user_view_init()
     end
@@ -91,7 +92,6 @@ class RubySoulNG
     end
     Thread.new do
       preferences_account_load_config(@rs_config.conf)
-      Thread.exit()
     end
     start_thread = Thread.new do
       Thread.stop()
@@ -99,7 +99,6 @@ class RubySoulNG
       if @rs_config.conf[:connection_at_startup]
         connection()
       end
-      Thread.exit()
     end
     Thread.new do
       @rs_contact.contacts.each do |key, value|
@@ -118,7 +117,6 @@ class RubySoulNG
         h.set_value(7, "location")
       end
       start_thread.run();
-      Thread.exit()
     end
   end
 
@@ -143,23 +141,23 @@ class RubySoulNG
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
       @parse_thread = Thread.new do
-        while @ns.sock
-          parse_cmd()
-          Thread.pass()
+        while line = @ns.sock_get().to_s.chomp
+          break if line.nil? or line.empty?
+          parse_cmd(line)
         end
-        disconnection(false) #without @ns.disconnect()
-        Thread.exit()
+        Thread.pass()
+        disconnection()
+        Thread.pass()
+        connection()
       end
       Gtk.queue do
         rsng_state_box_update()
       end
       Thread.new do
         send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-        Thread.exit()
       end
       Thread.new do
         send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-        Thread.exit()
       end
       Gtk.queue do
         print_online_status()
@@ -174,11 +172,11 @@ class RubySoulNG
       return false
     end
   end
-  def disconnection(ns_server_too = true)
-    @ns.disconnect() if ns_server_too
+  def disconnection()
+    @ns.disconnect()
     @xfer_files_recv.clear()
     @xfer_files_send.clear()
-    @parse_thread.exit() if @parse_thread.is_a?(Thread)
+    @parse_thread.kill() if @parse_thread.is_a?(Thread)
     @user_dialogs.each do |user, dialog|
       dialog.destroy()
     end
@@ -224,16 +222,7 @@ class RubySoulNG
     end
   end
 
-  def parse_cmd
-    begin
-      buff = @ns.sock_get().to_s
-    rescue
-      Thread.new do
-        disconnection(false)
-        Thread.exit()
-      end
-      return
-    end
+  def parse_cmd(buff)
     #puts buff
     case buff.split(' ')[0]
     when "ping"
@@ -241,11 +230,7 @@ class RubySoulNG
     when "rep"
       rep(buff)
     when "user_cmd"
-      Thread.new do
-        user_cmd(buff)
-        #Thread.exit()
-      end
-      return
+      user_cmd(buff)
     else
       if buff.split(' ').length == 12 # list_user, for user location update
         socket = buff.split(' ')[0]
@@ -272,7 +257,7 @@ class RubySoulNG
             @user_dialogs[login.to_sym].hide_all()
           end
         end
-        Thread.new do
+        Gtk.queue do
           @user_model.each do |model,path,iter|
             if (iter[4].to_s == socket.to_s)
               iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(status.to_s), 24, 24))
@@ -299,7 +284,6 @@ class RubySoulNG
               iter.set_value(7, location)
             end
           end
-          Thread.exit()
         end
       end
     end
@@ -311,8 +295,7 @@ class RubySoulNG
         @ns.sock_send(msg)
       rescue
         Thread.new do
-          disconnection(false)
-          Thread.exit()
+          disconnection()
         end
       end
     end
@@ -321,7 +304,6 @@ class RubySoulNG
   def ping
     Thread.new do
       send_cmd(NetSoul::Message.ping())
-      Thread.exit()
     end
     return true
   end
@@ -547,7 +529,6 @@ class RubySoulNG
       end
       Thread.new do
         send_cmd( NetSoul::Message.list_users(login.to_s) )
-        Thread.exit()
       end
       Gtk.queue do
         print_online_status()
@@ -621,7 +602,7 @@ class RubySoulNG
       xfer_accept_recv(socket, response)
     when "desoul_ns_xfer_data"
       if @xfer_files_recv.include?(response.split(' ')[0].to_s)
-      	xfer_data_recv(socket, response)
+        xfer_data_recv(socket, response)
       end
     when "desoul_ns_xfer_cancel"
       xfer_cancel_recv(socket, response)
@@ -661,7 +642,6 @@ class RubySoulNG
               @xfer_files_recv[id.to_s][:fd] = File.new(filepath, "wb")
               Thread.new do
                 send_cmd( NetSoul::Message.xfer_accept(socket.to_s, id.to_s) )
-                Thread.exit()
               end
             else
               @xfer_files_recv.delete(id.to_s)
@@ -689,22 +669,23 @@ class RubySoulNG
   def xfer_data_recv(socket, response)
     begin
       id = response.to_s.split(' ')[0]
-      data = response.to_s.split(' ')[1]
+      data = URI.unescape(response.to_s.split(' ')[1])
       data = data.unpack("m").to_s.chomp
       @xfer_files_recv[id.to_s][:buffer] = data
       Thread.new do
-      	@xfer_files_recv[id.to_s][:mutex].synchronize {
-      		@xfer_files_recv[id.to_s][:size] += @xfer_files_recv[id.to_s][:fd].write_nonblock(@xfer_files_recv[id.to_s][:buffer])
-      		#percent = @xfer_files_recv[id.to_s][:size].to_i * 100 / @xfer_files_recv[id.to_s][:total_size].to_i
-				  #$stdout << "\r#{percent}%"
-				  #$stdout.flush
-				  if @xfer_files_recv[id.to_s][:size].to_i >= @xfer_files_recv[id.to_s][:total_size].to_i
-				    @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
-				    @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
-				    #print "\nOK !!!\n"
-				  end
-      	}
-        #Thread.exit()
+        @xfer_files_recv[id.to_s][:mutex].synchronize {
+          @xfer_files_recv[id.to_s][:size] += @xfer_files_recv[id.to_s][:fd].write_nonblock(@xfer_files_recv[id.to_s][:buffer])
+          #Gtk.queue do
+          #  percent = @xfer_files_recv[id.to_s][:size].to_i * 100 / @xfer_files_recv[id.to_s][:total_size].to_i
+          #  $stdout << "\rDownloading... : #{percent}%"
+          #  $stdout.flush
+          #  if @xfer_files_recv[id.to_s][:size].to_i >= @xfer_files_recv[id.to_s][:total_size].to_i
+          #    @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
+          #    @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
+          #    print "\nOK !!!\n"
+          #  end
+          #end
+        }
       end
     rescue
       puts "Error: #{$!}"
@@ -816,7 +797,6 @@ class RubySoulNG
           end
           Thread.new do
             send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-            Thread.exit()
           end
         end
       end
@@ -935,7 +915,6 @@ class RubySoulNG
       if (@ns.authenticated)
         Thread.new do
           send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
-          Thread.exit()
         end
         @rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
         @rs_config.save()
@@ -1019,11 +998,9 @@ class RubySoulNG
       if @ns.authenticated
         Thread.new do
           send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-          Thread.exit()
         end
         Thread.new do
           send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-          Thread.exit()
         end
       end
     else
