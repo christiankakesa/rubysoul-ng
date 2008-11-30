@@ -61,7 +61,7 @@ class RsStatusIcon < Gtk::StatusIcon
       menu.append(Gtk::SeparatorMenuItem.new)
 
       menuitem = Gtk::ImageMenuItem.new(Gtk::Stock::ABOUT)
-      menuitem.child().set_label("_About")
+      menuitem.child().set_label("_Informations")
       menuitem.signal_connect("activate"){|w|
         @main_app.on_tb_about_clicked(w)
       }
