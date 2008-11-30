@@ -19,9 +19,9 @@ class RsTooltip < Gtk::Tooltips
     if @parent_widget
       @parent_widget.signal_connect("motion-notify-event") do |widget, event|
         path, column, x, y = @parent_widget.get_path_at_pos(event.x, event.y)
-        if !path.nil?()
+        if not path.nil?()
           iter = @parent_widget.model.get_iter(path)
-          if (@parent_widget.model.iter_is_valid?(iter) && !(@current_iter == iter))
+          if not @current_iter.equal?(iter)
           	if (!iter.has_child?() && iter.parent().nil?() && iter[3].to_s != "zzzzzz_z") 
           		set_tip(@parent_widget, build_text(iter), nil)
             elsif (iter.has_child?() && iter.parent().nil?() && iter[3].to_s != "zzzzzz_z")
