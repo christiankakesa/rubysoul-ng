@@ -29,12 +29,7 @@ class RsConfig
   AGENT = APP_NAME + " - V" + APP_VERSION
   DEFAULT_SIZE_W = 290
   DEFAULT_SIZE_H = 420
-  FILE_BUFFER_SIZE = 10240
-
-  #CONFIG_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}config.yml"
-  #CONTACTS_FILENAME = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts.yml"
-  #CONTACTS_PHOTO_DIR = "#{APP_DIR+File::SEPARATOR}data#{File::SEPARATOR}contacts_photo"
-  #CONTACTS_PHOTO_URL = "http://intra.epitech.eu/intra/photo.php?login=" #TODO try to detect if in PIE
+  FILE_BUFFER_SIZE = 1024
 
   @@theme_name = "msn"
   THEME_DIR = "#{APP_DIR+File::SEPARATOR}themes#{File::SEPARATOR+@@theme_name}"

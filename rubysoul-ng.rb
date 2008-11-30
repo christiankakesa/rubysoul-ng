@@ -9,7 +9,6 @@ $KCODE = 'u'
 
 begin
   require 'glib2'
-  require 'kconv'
   require 'libglade2'
   require 'thread'
   require 'ftools'
@@ -18,6 +17,7 @@ begin
   require 'rs_config'
   require 'rs_contact'
   require 'rs_infobox'
+  require 'rs_status_icon'
   require 'rs_tooltip'
   require 'rs_dialog'
 rescue LoadError
@@ -26,20 +26,17 @@ rescue LoadError
 end
 
 class RubySoulNG
-  include GetText
 
   attr :glade
 
   def initialize
-    #if not GLib::Thread.supported?()
-    #  Glib::Thread.init()
-    #end
-    @domain = RsConfig::APP_NAME
-    bindtextdomain(@domain, nil, nil, "UTF-8")
+    if not GLib::Thread.supported?()
+      Glib::Thread.init()
+    end
     @glade = GladeXML.new(
     "#{RsConfig::APP_DIR+File::SEPARATOR}rubysoul-ng_win.glade",
     nil,
-    @domain,
+    RsConfig::APP_NAME,
     nil,
     GladeXML::FILE) do |handler|
       method(handler)
@@ -51,7 +48,8 @@ class RubySoulNG
     @rsng_win.set_size_request(RsConfig::DEFAULT_SIZE_W, RsConfig::DEFAULT_SIZE_H)
     @rsng_tb_connect = @glade['tb_connect']
     @rsng_user_view = @glade['user_view']
-    #@rsng_user_view_tooltip = RsTooltip.new(@rsng_user_view)
+    @rsng_user_view_tooltip = RsTooltip.new(@rsng_user_view)
+    @rsng_status_icon = RsStatusIcon.new(self, @rsng_win)
     @rsng_state_box = @glade['state_box']
     @contact_win = @glade['contact']
     @contact_add_entry = @glade['contact_add_entry']
@@ -141,7 +139,8 @@ class RubySoulNG
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
       @parse_thread = Thread.new do
-        while line = @ns.sock_get().to_s.chomp
+        while true
+          line = @ns.sock_get().to_s.chomp
           break if line.nil? or line.empty?
           parse_cmd(line)
         end
@@ -165,7 +164,7 @@ class RubySoulNG
       return true
     else
       Gtk.queue do
-        RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server.\n\t- Try to reconnect.", "error", false)
+        RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server : \n\t- Try to reconnect", "error", false)
         @preferences_win.show_all()
         @preferences_nbook.set_page(0)
       end
@@ -176,7 +175,7 @@ class RubySoulNG
     @ns.disconnect()
     @xfer_files_recv.clear()
     @xfer_files_send.clear()
-    @parse_thread.kill() if @parse_thread.is_a?(Thread)
+    @parse_thread.kill() if (@parse_thread.is_a?(Thread) && @parse_thread.alive?)
     @user_dialogs.each do |user, dialog|
       dialog.destroy()
     end
@@ -194,6 +193,7 @@ class RubySoulNG
       @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
       @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
       @user_model_iter_offline.set_value(3, "zzzzzz_z")
+      @user_model_iter_offline.first!()
     end
     Gtk.queue do
       if @rs_contact
@@ -370,8 +370,8 @@ class RubySoulNG
     sender = user.split(":")[3].split('@')[0]
     sub_cmd = response.split(' ')[0]
     case sub_cmd
-    when "desoul_ns_xfer", "desoul_ns_xfer_accept", "desoul_ns_xfer_data", "desoul_ns_xfer_cancel"
-      xfer_process_recv(sub_cmd.to_s, user.to_s, response.to_s.split(' ')[1])
+      #when "desoul_ns_xfer", "desoul_ns_xfer_accept", "desoul_ns_xfer_data", "desoul_ns_xfer_cancel"
+      #  xfer_process_recv(sub_cmd.to_s, user.to_s, response.to_s.split(' ')[1])
     when "dotnetSoul_UserTyping", "typing_start"
       #| dotnetSoul_UserTyping null dst=kakesa_c
       socket = response.split(' ')[1]
@@ -527,6 +527,9 @@ class RubySoulNG
           end
         end
       end
+      if @user_dialogs.include?(login.to_sym)
+        @user_dialogs[login.to_sym].set_active(true)
+      end
       Thread.new do
         send_cmd( NetSoul::Message.list_users(login.to_s) )
       end
@@ -583,13 +586,16 @@ class RubySoulNG
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
         end
+        if @user_dialogs.include?(login.to_sym)
+          @user_dialogs[login.to_sym].set_active(false)
+        end
       else
         return false
       end
       return true
     end
   end
-
+=begin
   def xfer_process_recv(cmd, user, response)
     socket = user.to_s.split(':')[0]
     socket = ":#{socket.to_s}"
@@ -668,23 +674,17 @@ class RubySoulNG
 
   def xfer_data_recv(socket, response)
     begin
-      id = response.to_s.split(' ')[0]
-      data = URI.unescape(response.to_s.split(' ')[1])
-      data = data.unpack("m").to_s.chomp
-      @xfer_files_recv[id.to_s][:buffer] = data
       Thread.new do
-        @xfer_files_recv[id.to_s][:mutex].synchronize {
+        @xfer_files_recv[id.to_s][:mutex].synchronize {id = response.to_s.split(' ')[0]
+          data = URI.unescape(response.to_s.split(' ')[1])
+          data = data.unpack("m").to_s.chomp
+          @xfer_files_recv[id.to_s][:buffer] = data
+
           @xfer_files_recv[id.to_s][:size] += @xfer_files_recv[id.to_s][:fd].write_nonblock(@xfer_files_recv[id.to_s][:buffer])
-          #Gtk.queue do
-          #  percent = @xfer_files_recv[id.to_s][:size].to_i * 100 / @xfer_files_recv[id.to_s][:total_size].to_i
-          #  $stdout << "\rDownloading... : #{percent}%"
-          #  $stdout.flush
-          #  if @xfer_files_recv[id.to_s][:size].to_i >= @xfer_files_recv[id.to_s][:total_size].to_i
-          #    @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
-          #    @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
-          #    print "\nOK !!!\n"
-          #  end
-          #end
+          if @xfer_files_recv[id.to_s][:size].to_i >= @xfer_files_recv[id.to_s][:total_size].to_i
+            @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
+            @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
+          end
         }
       end
     rescue
@@ -708,17 +708,19 @@ class RubySoulNG
       end
     end
   end
-
+=end
   #--- | Main window
-  def on_RubySoulNG_delete_event(widget, event)
+  def on_statusicon_delete_event
     begin
-      Thread.new do
-        disconnection()
-      end
+      disconnection()
     rescue
     ensure
       Gtk.main_quit()
     end
+  end
+
+  def on_RubySoulNG_delete_event(widget, event)
+    @rsng_win.hide_all()
   end
 
   def on_tb_connect_clicked(widget)
@@ -768,6 +770,7 @@ class RubySoulNG
     @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
     @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@rs_contact.contacts.length}/#{@rs_contact.contacts.length})</span>])
     @user_model_iter_offline.set_value(3, "zzzzzz_z")
+    @user_model_iter_offline.first!()
     @rsng_user_view.signal_connect("row-activated") do |view, path, column|
       if (	view.model.get_iter(path)[5].to_s.eql?("actif") or view.model.get_iter(path)[5].to_s.eql?("away") or view.model.get_iter(path)[5].to_s.eql?("busy") or view.model.get_iter(path)[5].to_s.eql?("idle") or view.model.get_iter(path)[5].to_s.eql?("lock")	)
         login = view.model.get_iter(path)[3]
