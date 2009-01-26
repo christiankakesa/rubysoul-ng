@@ -207,23 +207,3 @@ unsigned char * base64_encode(const unsigned char *src, size_t len, size_t *out_
 		*out_len = pos - out;
 	return out;
 }
-
-#if 0
-int	main(int ac, char **av)
-{
-	k_data_t	*data;
-	unsigned char		*token_base64;
-	size_t			elen;
-
-	data = calloc(1, sizeof (k_data_t));
-	data->login = "kakesa_c";
-	data->unix_pass = "eoxp[s1G";
-	data->itoken = GSS_C_NO_BUFFER;
-	check_tokens(data);
-	token_base64 = base64_encode((const unsigned char*)data->otoken.value, data->otoken.length, &elen);
-	puts(token_base64);
-	gss_delete_sec_context(&data->min, &data->ctx, &data->otoken);
-	free(data);
-	return (0);
-}
-#endif
