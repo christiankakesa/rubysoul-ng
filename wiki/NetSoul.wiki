@@ -7,4 +7,11 @@ NetSoul is the IONIS school athentification protocol.
 
 = Details =
 
-NetSoul protocol give access to all members of the IONIS school, a rights for use network services like : proxies, printing, vpn etc...
+NetSoul protocol give access to all members of the IONIS school, permissions to use network services like : proxies, printing, vpn etc...
+
+= Links =
+ * http://redmine.kakesa.net/projects/show/rubynetsoul
+ * http://doc.ubuntu-fr.org/netsoul
+ * http://www.kinox-fr.com/post/2009/05/AndroidSoul-un-client-netsoul-pour-Android
+ * http://sourceforge.net/projects/gaim-netsoul/
+ * http://www.pingou.fr/Pingou/Samesoul/samesoul.php
