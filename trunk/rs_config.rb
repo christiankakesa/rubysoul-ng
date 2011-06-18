@@ -92,7 +92,7 @@ class RsConfig
   		data_home = GLib.home_dir+File::SEPARATOR+'.local'+File::SEPARATOR+'share'
   		@contacts_filename = data_home+File::SEPARATOR+APP_NAME.downcase()+File::SEPARATOR+'contacts.yml'
   	else
-  		config_home = GLib.getenv('XDG_DATA_HOME')
+  		data_home = GLib.getenv('XDG_DATA_HOME')
   		@contacts_filename = data_home+File::SEPARATOR+APP_NAME.downcase()+File::SEPARATOR+'contacts.yml'
   	end
   	if not FileTest.exist?(@contacts_filename)
