@@ -114,7 +114,7 @@ class RsConfig
   		File.makedirs(@contacts_photo_dir)
   	end
   	if not in_pie?()
-  		@contacts_photo_url = 'http://intra.epitech.eu/intra/photo.php?login='
+  		@contacts_photo_url = 'http://www.epitech.eu/intra/photo.php?login='
   	else
   		@contacts_photo_url = 'http://intra/photo.php?login='
   	end

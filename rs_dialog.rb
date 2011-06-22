@@ -16,13 +16,18 @@ class RsDialog < Gtk::Window
   #attr_accessor :receive_msg
 
   def initialize(login, num_session)
-    super("#{login.to_s}")
+    super("#{login.to_s} : #{num_session}")
     @login = login.to_s
     @num_session = num_session.to_i
     @send_typing = false
     @ns = NetSoul::NetSoul::instance()
     @rs_config = RsConfig::instance()
-    set_icon(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}"))
+    begin
+    	set_icon(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}"))
+    rescue => err
+    	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+    	set_icon(Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l'))
+    end
     vbox = Gtk::VBox.new
     hbox = Gtk::HBox.new
     set_modal(false)
@@ -58,7 +63,12 @@ class RsDialog < Gtk::Window
     @send_view_tv.set_can_default(true)
     @send_view = Gtk::ScrolledWindow.new().add(@send_view_tv)
     @send_view.set_policy(Gtk::POLICY_AUTOMATIC, Gtk::POLICY_AUTOMATIC)
-    @user_img = Gtk::Image.new(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}", 128, 128))
+    begin
+    	@user_img = Gtk::Image.new(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}", 128, 128))
+    rescue => err
+    	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+    	@user_img = Gtk::Image.new(Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 128, 128))
+    end
     @user_img.set_can_focus(false)
     @statusbar = Gtk::Statusbar.new
     @ctx_init_id = @statusbar.get_context_id("init")
