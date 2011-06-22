@@ -27,4 +27,3 @@ module Gtk
     Gtk.main
   end
 end
-

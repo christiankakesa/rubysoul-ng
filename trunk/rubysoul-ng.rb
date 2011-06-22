@@ -1,4 +1,5 @@
 #!/usr/bin/ruby
+# -*- coding: utf-8 -*-
 =begin
   Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 	$Author$
@@ -76,6 +77,7 @@ class RubySoulNG
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
     @mutex_parse = Mutex.new
+    @ns = NetSoul::NetSoul::instance()
     Gtk.queue do
       rsng_user_view_init()
     end
@@ -88,33 +90,31 @@ class RubySoulNG
     Gtk.queue do
       preferences_account_init()
     end
-    Thread.new do
+    Gtk.queue do
       preferences_account_load_config(@rs_config.conf)
     end
-    start_thread = Thread.new do
-      Thread.stop()
-      @ns = NetSoul::NetSoul::instance()
-      if @rs_config.conf[:connection_at_startup]
-        connection()
-      end
-    end
-    Thread.new do
+    Gtk.queue do
       @rs_contact.contacts.each do |key, value|
         h = @user_model.append(@user_model_iter_offline)
         h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
         h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-        if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}"))
-          h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
-        else
-          h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
-        end
+        begin
+         	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
+        rescue => err
+					STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+					h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+				end
         h.set_value(3, key.to_s)
         h.set_value(4, "num_session")
         h.set_value(5, "status")
         h.set_value(6, "user_data")
         h.set_value(7, "location")
       end
-      start_thread.run();
+    end
+    Gtk.queue do
+      if @rs_config.conf[:connection_at_startup]
+        connection()
+      end
     end
   end
 
@@ -144,18 +144,16 @@ class RubySoulNG
           break if line.nil? or line.empty?
           parse_cmd(line)
         end
-        Thread.pass()
         disconnection()
-        Thread.pass()
         connection()
       end
       Gtk.queue do
         rsng_state_box_update()
       end
-      Thread.new do
+      Gtk.queue do
         send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
       end
-      Thread.new do
+      Gtk.queue do
         send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
       end
       Gtk.queue do
@@ -184,7 +182,7 @@ class RubySoulNG
       @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
       @rsng_tb_connect.set_label("Connection")
     end
-    Thread.new do
+    Gtk.queue do
       @rs_contact.load_contacts()
     end
     Gtk.queue do
@@ -201,10 +199,11 @@ class RubySoulNG
           h = @user_model.append(@user_model_iter_offline)
           h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
           h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-          if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}"))
-            h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
-          else
-            h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+          begin
+           	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
+          rescue => err
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+           	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           h.set_value(3, key.to_s)
           h.set_value(4, "num_session")
@@ -268,9 +267,10 @@ class RubySoulNG
               end
               if @rs_contact.contacts[login.to_sym][:connections].length == 1
                 iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-                if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
+                begin
                   iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-                else
+                rescue => err
+                	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
                   iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
                 end
               else
@@ -294,18 +294,14 @@ class RubySoulNG
       begin
         @ns.sock_send(msg)
       rescue
-        Thread.new do
-          disconnection()
-        end
+        disconnection()
       end
     end
   end
 
   def ping
-    Thread.new do
-      send_cmd(NetSoul::Message.ping())
-    end
-    return true
+   send_cmd(NetSoul::Message.ping())
+   return true
   end
 
   def rep(cmd)
@@ -457,9 +453,10 @@ class RubySoulNG
           iter = @user_model.prepend(nil)
           iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(val[:status]), 24, 24))
           iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-          if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
+          begin
             iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-          else
+          rescue => err
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
             iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -473,9 +470,10 @@ class RubySoulNG
           if (iter[3].to_s == login.to_s)
             iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
             iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-            if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
+            begin
               iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-            else
+            rescue => err
+            	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
               iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
             end
             iter.set_value(3, login.to_s)
@@ -527,12 +525,12 @@ class RubySoulNG
           end
         end
       end
+=begin
       if @user_dialogs.include?(login.to_sym)
         @user_dialogs[login.to_sym].set_active(true)
       end
-      Thread.new do
-        send_cmd( NetSoul::Message.list_users(login.to_s) )
-      end
+=end
+      send_cmd( NetSoul::Message.list_users(login.to_s) )
       Gtk.queue do
         print_online_status()
       end
@@ -548,9 +546,10 @@ class RubySoulNG
           iter = @user_model.append(@user_model_iter_offline)
           iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
           iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-          if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
+          begin
             iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-          else
+          rescue => err
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
             iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -570,9 +569,10 @@ class RubySoulNG
             iter = @user_model.prepend(nil)
             iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(val[:status].to_s), 24, 24))
             iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-            if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
+            begin
               iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-            else
+            rescue => err
+            	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
               iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
             end
             iter.set_value(3, login.to_s)
@@ -586,9 +586,11 @@ class RubySoulNG
             @user_model.remove(iter) if (iter[4].to_s == socket.to_s)
           end
         end
+=begin
         if @user_dialogs.include?(login.to_sym)
           @user_dialogs[login.to_sym].set_active(false)
         end
+=end
       else
         return false
       end
@@ -798,9 +800,7 @@ class RubySoulNG
             @user_dialogs[login.to_sym].destroy()
             @user_dialogs.delete(login.to_sym)
           end
-          Thread.new do
-            send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-          end
+          send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
       end
     end
@@ -833,10 +833,11 @@ class RubySoulNG
         iter = @user_model.append(@user_model_iter_offline)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_STATE_DISCONNECT, 24, 24))
         iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-        if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
-          iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-        else
-          iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+        begin
+        	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+        rescue => err
+        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+        	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32)) 
         end
         iter.set_value(3, login.to_s)
         iter.set_value(4, "num_session")
@@ -848,10 +849,11 @@ class RubySoulNG
           iter = @user_model.prepend(nil)
           iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(va[:status]), 24, 24))
           iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-          if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
-            iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-          else
-            iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+          begin
+          	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+          rescue => err
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+          	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
           iter.set_value(4, ke.to_s)
@@ -863,10 +865,11 @@ class RubySoulNG
         iter = @user_model.prepend(nil)
         iter.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_MULTICONNECT, 24, 24))
         iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-        if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
-          iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-        else
-          iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+        begin
+        	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+        rescue => err
+        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+         	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
         end
         iter.set_value(3, login.to_s)
         iter.set_value(4, "num_session")
@@ -916,7 +919,7 @@ class RubySoulNG
     @rsng_state_box.set_sensitive(false)
     @rsng_state_box.signal_connect("changed") do
       if (@ns.authenticated)
-        Thread.new do
+        Gtk.queue do
           send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
         end
         @rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
@@ -987,10 +990,11 @@ class RubySoulNG
       h = @user_model.append(@user_model_iter_offline)
       h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
       h.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-      if (File.exist?("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}"))
-        h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-      else
-        h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+      begin
+       	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+      rescue => err
+      	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+       	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
       end
       h.set_value(3, login.to_s)
       h.set_value(4, "num_session")
@@ -999,10 +1003,10 @@ class RubySoulNG
       h.set_value(7, "location")
       print_online_status()
       if @ns.authenticated
-        Thread.new do
+        Gtk.queue do
           send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
         end
-        Thread.new do
+        Gtk.queue do
           send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
         end
       end
