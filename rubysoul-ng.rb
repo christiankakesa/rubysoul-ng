@@ -72,26 +72,15 @@ class RubySoulNG
     @user_dialogs = Hash.new
     @rs_config = RsConfig::instance()
     @rs_contact = RsContact::instance()
-    @mutex_msg = Mutex.new
+    @mutex_send_msg = Mutex.new
     @parse_thread = nil
     @mutex_parse = Mutex.new
-    @ns = NetSoul::NetSoul::instance()
     Gtk.queue do
       rsng_user_view_init()
-    end
-    Gtk.queue do
       rsng_state_box_init()
-    end
-    Gtk.queue do
       print_init_status()
-    end
-    Gtk.queue do
       preferences_account_init()
-    end
-    Gtk.queue do
       preferences_account_load_config(@rs_config.conf)
-    end
-    Gtk.queue do
       @rs_contact.contacts.each do |key, value|
         h = @user_model.append(@user_model_iter_offline)
         h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
@@ -109,10 +98,9 @@ class RubySoulNG
         h.set_value(7, "location")
       end
     end
-    Gtk.queue do
-      if @rs_config.conf[:connection_at_startup]
-        connection()
-      end
+    @ns = NetSoul::NetSoul::instance()
+    if @rs_config.conf[:connection_at_startup]
+    	connection()
     end
   end
 
@@ -144,7 +132,7 @@ class RubySoulNG
           begin
             line = @ns.sock_get().to_s.chomp
             if !line.nil? and !line.empty?
-              @mutex_msg.synchronize do
+              @mutex_parse.synchronize do
                 parse_cmd(line) # Blocking call
               end
               sleep(0.5) # We have time to share with another threads
@@ -164,12 +152,8 @@ class RubySoulNG
       Gtk.queue do
         rsng_state_box_update()
       end
-      Gtk.queue do
-        send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-      end
-      Gtk.queue do
-        send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-      end
+			send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+			send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
       Gtk.queue do
         print_online_status()
       end
@@ -304,7 +288,7 @@ class RubySoulNG
 
   def send_cmd(msg)
     begin
-      @mutex_msg.synchronize do
+      @mutex_send_msg.synchronize do
         @ns.sock_send(msg)
       end
     rescue => err
