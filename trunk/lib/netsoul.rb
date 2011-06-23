@@ -78,13 +78,13 @@ module NetSoul
     end
 
     def sock_send(str)
-    	if !@sock.closed?
+    	if !@sock.nil?
     		@sock.puts str.to_s.chomp
     	end
     end
 
     def sock_get()
-    	if !@sock.closed?
+    	if !@sock.nil?
     		return @sock.gets
     	end
     end

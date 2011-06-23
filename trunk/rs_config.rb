@@ -21,12 +21,12 @@ class RsConfig
   ########################
   APP_NAME = "RubySoul-NG"
   APP_DIR = "#{File.dirname(__FILE__)}"
-  APP_VERSION = "0.9.9b"
+  APP_VERSION = "1.0.0"
   AUTHOR_NAME = "Christian"
   AUTHOR_FIRSTNAME = "KAKESA"
   AUTHOR_FULLNAME = "#{AUTHOR_NAME} #{AUTHOR_FIRSTNAME}"
   AUTHOR_EMAIL = "christian.kakesa@gmail.com"
-  AGENT = APP_NAME + " - V" + APP_VERSION
+  AGENT = APP_NAME + " v" + APP_VERSION
   DEFAULT_SIZE_W = 290
   DEFAULT_SIZE_H = 420
   FILE_BUFFER_SIZE = 1024
