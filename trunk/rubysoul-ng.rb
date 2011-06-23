@@ -72,7 +72,7 @@ class RubySoulNG
     @user_dialogs = Hash.new
     @rs_config = RsConfig::instance()
     @rs_contact = RsContact::instance()
-    @mutex_send_msg = Mutex.new
+    @mutex_msg = Mutex.new
     @parse_thread = nil
     @mutex_parse = Mutex.new
     @ns = NetSoul::NetSoul::instance()
@@ -117,9 +117,9 @@ class RubySoulNG
   end
 
   def connection
-  	if @ns.nil?
-  		@ns = NetSoul::NetSoul::instance()
-  	end
+    if @ns.nil?
+      @ns = NetSoul::NetSoul::instance()
+    end
     if @rs_config.conf[:login].to_s.length == 0
       @preferences_win.show_all()
       @preferences_nbook.set_page(0)
@@ -141,16 +141,24 @@ class RubySoulNG
       @rsng_tb_connect.set_label("Disconnection")
       @parse_thread = Thread.new do
       	loop do
-        	begin
-	      		line = @ns.sock_get().to_s.chomp
-	      		if !line.nil? and !line.empty?
-	      			parse_cmd(line)
-	      		end
-	      	rescue => err
-	      		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-	      		sleep 5.0
-	    		connection()
-	    	end
+          begin
+            line = @ns.sock_get().to_s.chomp
+            if !line.nil? and !line.empty?
+              @mutex_msg.synchronize do
+                parse_cmd(line) # Blocking call
+              end
+              sleep(0.5) # We have time to share with another threads
+            end
+          rescue => err
+            STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+            Gtk.queue do
+              disconnection()
+            end
+            sleep 1.0 # Slow down my friends we are not in late
+            Gtk.queue do
+              connection()
+            end
+          end
         end
       end
       Gtk.queue do
@@ -295,20 +303,27 @@ class RubySoulNG
   end
 
   def send_cmd(msg)
-    @mutex_send_msg.synchronize do
-      begin
+    begin
+      @mutex_msg.synchronize do
         @ns.sock_send(msg)
-      rescue
+      end
+    rescue => err
+      STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+      Gtk.queue do
         disconnection()
+      end
+      sleep 1.0 # Slow down my friends we are not in late
+      Gtk.queue do
+        connection()
       end
     end
   end
-
+  
   def ping
-   send_cmd(NetSoul::Message.ping())
-   return true
+    send_cmd(NetSoul::Message.ping())
+    return true
   end
-
+  
   def rep(cmd)
     msg_num = cmd.split(' ')[1]
     case msg_num.to_s
