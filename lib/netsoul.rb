@@ -45,7 +45,7 @@ module NetSoul
       @connection_values[:user_group] = @rs_config.conf[:user_group]
       @connection_values[:system] = RUBY_PLATFORM
       @connection_values[:timestamp_diff] = server_timestamp_diff
-      return auth
+      return auth()
     end
 
     def auth
@@ -78,19 +78,18 @@ module NetSoul
     end
 
     def sock_send(str)
-    	if @sock
-      	@sock.puts str.to_s.chomp
-      end
+    	if !@sock.closed?
+    		@sock.puts str.to_s.chomp
+    	end
     end
 
     def sock_get()
-    	if @sock
-        return @sock.gets
-      end
+    	if !@sock.closed?
+    		return @sock.gets
+    	end
     end
 
     def sock_close
-      @sock.close() if @sock
       @sock = nil
       @authenticated = false
     end

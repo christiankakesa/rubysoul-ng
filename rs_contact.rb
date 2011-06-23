@@ -66,7 +66,6 @@ class RsContact
     File.open(@rs_config.contacts_filename, "wb") do |file|
       file.puts '#--- ! RubySoulNG contacts file'
       file.puts c.to_yaml
-      file.close()
     end
   end
 

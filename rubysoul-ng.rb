@@ -68,8 +68,6 @@ class RubySoulNG
     @ctx_offline_id = @statusbar.get_context_id("offline")
     @ctx_online_id = @statusbar.get_context_id("online")
     @ctx_current_id = @ctx_init_id
-    @xfer_files_recv = Hash.new
-    @xfer_files_send = Hash.new
     @user_online = 0
     @user_dialogs = Hash.new
     @rs_config = RsConfig::instance()
@@ -119,6 +117,9 @@ class RubySoulNG
   end
 
   def connection
+  	if @ns.nil?
+  		@ns = NetSoul::NetSoul::instance()
+  	end
     if @rs_config.conf[:login].to_s.length == 0
       @preferences_win.show_all()
       @preferences_nbook.set_page(0)
@@ -139,13 +140,18 @@ class RubySoulNG
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
       @rsng_tb_connect.set_label("Disconnection")
       @parse_thread = Thread.new do
-        while true
-          line = @ns.sock_get().to_s.chomp
-          break if line.nil? or line.empty?
-          parse_cmd(line)
+      	loop do
+        	begin
+	      		line = @ns.sock_get().to_s.chomp
+	      		if !line.nil? and !line.empty?
+	      			parse_cmd(line)
+	      		end
+	      	rescue => err
+	      		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+	      		sleep 5.0
+	    		connection()
+	    	end
         end
-        disconnection()
-        connection()
       end
       Gtk.queue do
         rsng_state_box_update()
@@ -171,9 +177,8 @@ class RubySoulNG
   end
   def disconnection()
     @ns.disconnect()
-    @xfer_files_recv.clear()
-    @xfer_files_send.clear()
-    @parse_thread.kill() if (@parse_thread.is_a?(Thread) && @parse_thread.alive?)
+    @parse_thread.exit() if (@parse_thread.is_a?(Thread) && @parse_thread.alive?)
+    @parse_thread = nil
     @user_dialogs.each do |user, dialog|
       dialog.destroy()
     end
@@ -597,120 +602,7 @@ class RubySoulNG
       return true
     end
   end
-=begin
-  def xfer_process_recv(cmd, user, response)
-    socket = user.to_s.split(':')[0]
-    socket = ":#{socket.to_s}"
-    login = user.split(":")[3].split('@')[0]
-    response = URI.unescape(response)
-    case cmd.to_s
-    when "desoul_ns_xfer"
-      xfer_recv(socket, login, response)
-    when "desoul_ns_xfer_accept"
-      xfer_accept_recv(socket, response)
-    when "desoul_ns_xfer_data"
-      if @xfer_files_recv.include?(response.split(' ')[0].to_s)
-        xfer_data_recv(socket, response)
-      end
-    when "desoul_ns_xfer_cancel"
-      xfer_cancel_recv(socket, response)
-    end
-  end
 
-  def xfer_recv(socket, login, response)
-    id, filename, size, desc = response.to_s.split(' ')[0..3]
-    filename = NetSoul::Message.unescape(filename.to_s)
-    desc = NetSoul::Message.unescape(desc.to_s)
-    homedir = ENV['HOME'] || ENV['HOMEDRIVE'] + ENV['HOMEPATH'] || ENV['USERPROFILE']
-    filepath = homedir + File::SEPARATOR + filename.to_s
-    Gtk.queue do
-      dialog = Gtk::Dialog.new("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}", @rsng_win,
-      Gtk::Dialog::DESTROY_WITH_PARENT,
-      [Gtk::Stock::CANCEL, Gtk::Dialog::RESPONSE_REJECT],
-      [Gtk::Stock::OK, Gtk::Dialog::RESPONSE_ACCEPT])
-      dialog.vbox.add(Gtk::Label.new("#{login.to_s} try to send you this file : "))
-      dialog.vbox.add(Gtk::Label.new(">> #{filename}"))
-      dialog.vbox.add(Gtk::Label.new(">> #{size} bytes"))
-      dialog.vbox.add(Gtk::Label.new(">> #{desc}"))
-      dialog.show_all()
-      dialog.run do |resp|
-        case resp
-        when Gtk::Dialog::RESPONSE_ACCEPT
-          begin
-            if not (FileTest.exist?(filepath))
-              @xfer_files_recv[id.to_s] = Hash.new
-              @xfer_files_recv[id.to_s][:filepath] = filepath
-              @xfer_files_recv[id.to_s][:filename] = filename.to_s
-              @xfer_files_recv[id.to_s][:total_size] = size.to_i
-              @xfer_files_recv[id.to_s][:size] = 0
-              @xfer_files_recv[id.to_s][:buffer] = ""
-              @xfer_files_recv[id.to_s][:total_buffer_size] = 0
-              @xfer_files_recv[id.to_s][:desc] = desc.to_s
-              @xfer_files_recv[id.to_s][:mutex] = Mutex.new
-              @xfer_files_recv[id.to_s][:fd] = File.new(filepath, "wb")
-              Thread.new do
-                send_cmd( NetSoul::Message.xfer_accept(socket.to_s, id.to_s) )
-              end
-            else
-              @xfer_files_recv.delete(id.to_s)
-              Gtk.queue do
-                RsInfobox.new(@rsng_win, "File: #{filepath} already exist", "warning", false)
-              end
-            end
-          rescue
-            Gtk.queue do
-              RsInfobox.new(@rsng_win, "#{$!}", "error", false)
-            end
-          end
-        end
-        dialog.destroy
-      end
-    end
-  end
-
-  def xfer_accept_recv(socket, response)
-    Gtk.queue do
-      RsInfobox.new(@rsng_win, "Receive xfer request from #{user.to_s}\n#{response.to_s}", "info", false)
-    end
-  end
-
-  def xfer_data_recv(socket, response)
-    begin
-      Thread.new do
-        @xfer_files_recv[id.to_s][:mutex].synchronize {id = response.to_s.split(' ')[0]
-          data = URI.unescape(response.to_s.split(' ')[1])
-          data = data.unpack("m").to_s.chomp
-          @xfer_files_recv[id.to_s][:buffer] = data
-
-          @xfer_files_recv[id.to_s][:size] += @xfer_files_recv[id.to_s][:fd].write_nonblock(@xfer_files_recv[id.to_s][:buffer])
-          if @xfer_files_recv[id.to_s][:size].to_i >= @xfer_files_recv[id.to_s][:total_size].to_i
-            @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
-            @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
-          end
-        }
-      end
-    rescue
-      puts "Error: #{$!}"
-      @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
-      @xfer_files_recv.delete(id.to_s) if @xfer_files_recv.include?(id.to_s)
-    end
-  end
-
-  def xfer_cancel_recv(socket, response)
-    id = response.to_s
-    if @xfer_files_recv.include?(id.to_s)
-      begin
-        @xfer_files_recv[id.to_s][:fd].close() if @xfer_files_recv[id.to_s][:fd]
-        File.delete(@xfer_files_recv[id.to_s][:filepath]) if FileTest.exist?(@xfer_files_recv[id.to_s][:filepath])
-        @xfer_files_recv.delete(id.to_s)
-      rescue
-        Gtk.queue do
-          RsInfobox.new(@rsng_win, "#{$!}", "error", false)
-        end
-      end
-    end
-  end
-=end
   #--- | Main window
   def on_statusicon_delete_event
     begin
