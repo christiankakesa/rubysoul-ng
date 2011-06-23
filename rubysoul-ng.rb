@@ -99,7 +99,7 @@ class RubySoulNG
         begin
          	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
         rescue => err
-					STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+					STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
 					h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
 				end
         h.set_value(3, key.to_s)
@@ -147,7 +147,7 @@ class RubySoulNG
 	      			parse_cmd(line)
 	      		end
 	      	rescue => err
-	      		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+	      		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
 	      		sleep 5.0
 	    		connection()
 	    	end
@@ -207,7 +207,7 @@ class RubySoulNG
           begin
            	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
           rescue => err
-          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
            	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           h.set_value(3, key.to_s)
@@ -275,7 +275,7 @@ class RubySoulNG
                 begin
                   iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
                 rescue => err
-                	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+                	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
                   iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
                 end
               else
@@ -461,7 +461,7 @@ class RubySoulNG
           begin
             iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
           rescue => err
-          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
             iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -478,7 +478,7 @@ class RubySoulNG
             begin
               iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
             rescue => err
-            	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+            	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
               iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
             end
             iter.set_value(3, login.to_s)
@@ -554,7 +554,7 @@ class RubySoulNG
           begin
             iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
           rescue => err
-          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
             iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -577,7 +577,7 @@ class RubySoulNG
             begin
               iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
             rescue => err
-            	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+            	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
               iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
             end
             iter.set_value(3, login.to_s)
@@ -728,7 +728,7 @@ class RubySoulNG
         begin
         	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
         rescue => err
-        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
         	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32)) 
         end
         iter.set_value(3, login.to_s)
@@ -744,7 +744,7 @@ class RubySoulNG
           begin
           	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
           rescue => err
-          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
           	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -760,7 +760,7 @@ class RubySoulNG
         begin
         	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
         rescue => err
-        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
          	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
         end
         iter.set_value(3, login.to_s)
@@ -885,7 +885,7 @@ class RubySoulNG
       begin
        	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
       rescue => err
-      	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err]
+      	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
        	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
       end
       h.set_value(3, login.to_s)
