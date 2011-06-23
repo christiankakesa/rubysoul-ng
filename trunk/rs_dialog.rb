@@ -129,7 +129,7 @@ class RsDialog < Gtk::Window
       end
       @send_buffer.delete(@send_buffer.start_iter, @send_buffer.end_iter)
     rescue
-      RsInfobox.new(self, "#{$!}", "error")
+      RsInfobox.new(self, __FILE__.to_s + "/" + __LINE__.to_s + " : " + "#{$!}", "error")
     end
   end
 
@@ -143,7 +143,7 @@ class RsDialog < Gtk::Window
       	@dialog_view.vadjustment.value = @dialog_view.vadjustment.upper - @dialog_view.vadjustment.step_increment
       end
     rescue
-      RsInfobox.new(self, "#{$!}", "error")
+      RsInfobox.new(self, __FILE__.to_s + "/" + __LINE__.to_s + " : " + "#{$!}", "error")
     end
   end
   

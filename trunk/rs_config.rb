@@ -21,7 +21,7 @@ class RsConfig
   ########################
   APP_NAME = "RubySoul-NG"
   APP_DIR = "#{File.dirname(__FILE__)}"
-  APP_VERSION = "0.9.9a"
+  APP_VERSION = "0.9.9b"
   AUTHOR_NAME = "Christian"
   AUTHOR_FIRSTNAME = "KAKESA"
   AUTHOR_FULLNAME = "#{AUTHOR_NAME} #{AUTHOR_FIRSTNAME}"
@@ -81,8 +81,7 @@ class RsConfig
   			File.makedirs(config_home+File::SEPARATOR+APP_NAME.downcase())
   		end
   		File.open(@config_filename, File::CREAT|File::RDWR, 0600) do |f|
-  			f.write( ":login: \n:socks_password: \n:unix_password: \n:server_host: ns-server.epita.fr\n:server_port: \"4242\"\n:connection_type: md5\n:connection_at_startup: true\n:user_group: IONIS\n:location: \"@ HOME\"\n:state: actif")
-				f.close()
+  			f.write( ":login: \n:socks_password: \n:unix_password: \n:server_host: ns-server.epita.fr\n:server_port: \"4242\"\n:connection_type: md5\n:connection_at_startup: true\n:auto_reconnect: true\n:user_group: IONIS\n:location: \"@ HOME\"\n:state: actif")
   		end
   	end
   end
@@ -132,7 +131,6 @@ class RsConfig
     File.open(@config_filename, "wb") do |file|
       file.puts '#--- ! RubySoulNG config file'
       file.puts @conf.to_yaml
-      file.close()
     end
   end
 end
