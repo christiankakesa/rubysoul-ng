@@ -30,6 +30,8 @@ class RsConfig
   DEFAULT_SIZE_W = 290
   DEFAULT_SIZE_H = 420
   FILE_BUFFER_SIZE = 1024
+  DEFAULT_NETSOUL_SERVER_HOST = 'ns-server.epita.fr'
+  DEFAULT_NETSOUL_SERVER_PORT = '4242'
 
   @@theme_name = "msn"
   THEME_DIR = "#{APP_DIR+File::SEPARATOR}themes#{File::SEPARATOR+@@theme_name}"
