@@ -96,9 +96,10 @@ class RubySoulNG
       h.set_value(6, "user_data")
       h.set_value(7, "location")
     end
-    @ns = NetSoul::NetSoul::instance()
     if @rs_config.conf[:connection_at_startup]
-    	connection()
+    	Thread.new do
+       connection()
+      end
     end
   end
 
