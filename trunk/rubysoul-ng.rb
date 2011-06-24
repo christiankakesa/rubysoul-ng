@@ -75,28 +75,26 @@ class RubySoulNG
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
     @mutex_parse = Mutex.new
-    Gtk.queue do
-      rsng_user_view_init()
-      rsng_state_box_init()
-      print_init_status()
-      preferences_account_init()
-      preferences_account_load_config(@rs_config.conf)
-      @rs_contact.contacts.each do |key, value|
-        h = @user_model.append(@user_model_iter_offline)
-        h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-        h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-        begin
-         	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
-        rescue => err
-					STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-					h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
-				end
-        h.set_value(3, key.to_s)
-        h.set_value(4, "num_session")
-        h.set_value(5, "status")
-        h.set_value(6, "user_data")
-        h.set_value(7, "location")
-      end
+    rsng_user_view_init()
+    rsng_state_box_init()
+    print_init_status()
+    preferences_account_init()
+    preferences_account_load_config(@rs_config.conf)
+    @rs_contact.contacts.each do |key, value|
+      h = @user_model.append(@user_model_iter_offline)
+      h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+      h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
+      begin
+       	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
+      rescue => err
+ 				STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+ 				h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+ 			end
+      h.set_value(3, key.to_s)
+      h.set_value(4, "num_session")
+      h.set_value(5, "status")
+      h.set_value(6, "user_data")
+      h.set_value(7, "location")
     end
     @ns = NetSoul::NetSoul::instance()
     if @rs_config.conf[:connection_at_startup]
@@ -139,13 +137,8 @@ class RubySoulNG
             end
           rescue => err
             STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-            Gtk.queue do
-              disconnection()
-            end
-            sleep 1.0 # Slow down my friends we are not in late
-            Gtk.queue do
-              connection()
-            end
+            reconnection = true
+            disconnection(reconnection)
           end
         end
       end
@@ -159,15 +152,13 @@ class RubySoulNG
       end
       return true
     else
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server : \n\t- Try to reconnect", "error", false)
-        @preferences_win.show_all()
-        @preferences_nbook.set_page(0)
-      end
+      RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server : \n\t- Try to reconnect", "error", false)
+      @preferences_win.show_all()
+      @preferences_nbook.set_page(0)
       return false
     end
   end
-  def disconnection()
+  def disconnection(reconnect = false)
     @ns.disconnect()
     @parse_thread.exit() if (@parse_thread.is_a?(Thread) && @parse_thread.alive?)
     @parse_thread = nil
@@ -179,35 +170,29 @@ class RubySoulNG
       @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
       @rsng_tb_connect.set_label("Connection")
     end
-    Gtk.queue do
-      @rs_contact.load_contacts()
-    end
-    Gtk.queue do
-      @user_model.clear()
-      @user_model_iter_offline = @user_model.append(nil)
-      @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-      @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
-      @user_model_iter_offline.set_value(3, "zzzzzz_z")
-      @user_model_iter_offline.first!()
-    end
-    Gtk.queue do
-      if @rs_contact
-        @rs_contact.contacts.each do |key, value|
-          h = @user_model.append(@user_model_iter_offline)
-          h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-          h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-          begin
-           	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
-          rescue => err
-          	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-           	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
-          end
-          h.set_value(3, key.to_s)
-          h.set_value(4, "num_session")
-          h.set_value(5, "status")
-          h.set_value(6, "user_data")
-          h.set_value(7, "location")
+    @rs_contact.load_contacts()
+    @user_model.clear()
+    @user_model_iter_offline = @user_model.append(nil)
+    @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
+    @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
+    @user_model_iter_offline.set_value(3, "zzzzzz_z")
+    @user_model_iter_offline.first!()
+    if @rs_contact
+      @rs_contact.contacts.each do |key, value|
+        h = @user_model.append(@user_model_iter_offline)
+        h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+        h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
+        begin
+         	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
+        rescue => err
+        	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+         	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
         end
+        h.set_value(3, key.to_s)
+        h.set_value(4, "num_session")
+        h.set_value(5, "status")
+        h.set_value(6, "user_data")
+        h.set_value(7, "location")
       end
     end
     Gtk.queue do
@@ -215,6 +200,9 @@ class RubySoulNG
     end
     Gtk.queue do
       print_offline_status()
+    end
+    if reconnect
+      connection()
     end
   end
 
@@ -253,33 +241,31 @@ class RubySoulNG
             @user_dialogs[login.to_sym].hide_all()
           end
         end
-        Gtk.queue do
-          @user_model.each do |model,path,iter|
-            if (iter[4].to_s == socket.to_s)
-              iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(status.to_s), 24, 24))
-              limit_location = 15
-              my_location = location.to_s.slice(0, limit_location.to_i)
-              if location.to_s.length > limit_location.to_i
-                my_location += "..."
-              end
-              if @rs_contact.contacts[login.to_sym][:connections].length == 1
-                iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
-                begin
-                  iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-                rescue => err
-                	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-                  iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
-                end
-              else
-                iter.set_value(1, %Q[<span weight="normal" size="x-small"> - #{my_location.to_s} on #{user_data.to_s.slice(0, 23)}</span>])
-                iter.set_value(2, nil)
-              end
-              iter.set_value(3, login.to_s)
-              iter.set_value(4, socket.to_s)
-              iter.set_value(5, status.to_s)
-              iter.set_value(6, user_data)
-              iter.set_value(7, location)
+        @user_model.each do |model,path,iter|
+          if (iter[4].to_s == socket.to_s)
+            iter.set_value(0, Gdk::Pixbuf.new(get_status_icon(status.to_s), 24, 24))
+            limit_location = 15
+            my_location = location.to_s.slice(0, limit_location.to_i)
+            if location.to_s.length > limit_location.to_i
+              my_location += "..."
             end
+            if @rs_contact.contacts[login.to_sym][:connections].length == 1
+              iter.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
+              begin
+                iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+              rescue => err
+              	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+                iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+              end
+            else
+              iter.set_value(1, %Q[<span weight="normal" size="x-small"> - #{my_location.to_s} on #{user_data.to_s.slice(0, 23)}</span>])
+              iter.set_value(2, nil)
+            end
+            iter.set_value(3, login.to_s)
+            iter.set_value(4, socket.to_s)
+            iter.set_value(5, status.to_s)
+            iter.set_value(6, user_data)
+            iter.set_value(7, location)
           end
         end
       end
@@ -293,13 +279,8 @@ class RubySoulNG
       end
     rescue => err
       STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-      Gtk.queue do
-        disconnection()
-      end
-      sleep 1.0 # Slow down my friends we are not in late
-      Gtk.queue do
-        connection()
-      end
+      reconnection = true
+      disconnection(reconnection)
     end
   end
   
@@ -323,18 +304,12 @@ class RubySoulNG
       #watch_log too long
     when "033"
       #Login or password incorrect
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, "Login or password incorrect", "warning", false)
-      end
+      RsInfobox.new(@rsng_win, "Login or password incorrect", "warning", false)
     when "131"
       #Permision denied
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, "Permision denied", "warning", false)
-      end
+      RsInfobox.new(@rsng_win, "Permision denied", "warning", false)
     when "140"
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, "User identification failed", "warning", false)
-      end
+      RsInfobox.new(@rsng_win, "User identification failed", "warning", false)
     else
       puts "Something is wrong in \"REP\" command response..."
       puts '[Response not Yet implemented] cmd:%s - msg_num:%s'%[cmd.to_s, msg_num.to_s]
@@ -350,15 +325,11 @@ class RubySoulNG
     when "mail"
       sender, subject = response.split(' ')[2..3]
       msg = "Vous avez reçu un email !!!\nDe: " + NetSoul::Message.unescape(sender) + "\nSujet: " + NetSoul::Message.unescape(subject)[1..-2]
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, msg, "info", false)
-      end
+      RsInfobox.new(@rsng_win, msg, "info", false)
     when "host"
       sender = response.split(' ')[2]
       msg = "Appel en en cours... !!!\nDe: " + NetSoul::Message.unescape(sender)[1..-1]
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, msg, "info", false)
-      end
+      RsInfobox.new(@rsng_win, msg, "info", false)
     when "user"
       get_user_response(cmd, user, response)
     else
@@ -624,9 +595,7 @@ class RubySoulNG
         connection()
       end
     rescue
-      Gtk.queue do
-        RsInfobox.new(@rsng_win, "#{$!}", "error", false)
-      end
+      RsInfobox.new(@rsng_win, "#{$!}", "error", false)
     end
   end
   def on_tb_contact_clicked(widget)
@@ -810,9 +779,7 @@ class RubySoulNG
     @rsng_state_box.set_sensitive(false)
     @rsng_state_box.signal_connect("changed") do
       if (@ns.authenticated)
-        Gtk.queue do
-          send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
-        end
+        send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
         @rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
         @rs_config.save()
       end
@@ -894,12 +861,8 @@ class RubySoulNG
       h.set_value(7, "location")
       print_online_status()
       if @ns.authenticated
-        Gtk.queue do
-          send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-        end
-        Gtk.queue do
-          send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-        end
+        send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+        send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
       end
     else
       RsInfobox.new(@contact_win, "No must specify the login", "warning")
