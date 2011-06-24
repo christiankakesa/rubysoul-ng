@@ -589,6 +589,9 @@ class RubySoulNG
 
   def on_tb_connect_clicked(widget)
     begin
+      if @ns.nil?
+        @ns = NetSoul::NetSoul::instance()
+      end
       if @ns.authenticated
         disconnection()
       else
