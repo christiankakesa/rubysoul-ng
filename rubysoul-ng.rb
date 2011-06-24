@@ -898,12 +898,12 @@ class RubySoulNG
     if conf[:server_host].to_s.length > 0
       @account_server_host_entry.text = conf[:server_host].to_s
     else
-      @account_server_host_entry.text = conf[:server_host] = "ns-server.epita.fr"
+      @account_server_host_entry.text = conf[:server_host] = RsConfig::DEFAULT_NETSOUL_SERVER_HOST
     end
     if conf[:server_port].to_s.length > 0
       @account_server_port_entry.text = conf[:server_port].to_s
     else
-      @account_server_port_entry.text = conf[:server_port] = "4242"
+      @account_server_port_entry.text = conf[:server_port] = RsConfig::DEFAULT_NETSOUL_SERVER_HOST
     end
     conf[:connection_type].eql?("krb5") ? @account_connection_type_krb5.set_active(true) : @account_connection_type_md5.set_active(true)
     if conf[:location].to_s.length > 0
