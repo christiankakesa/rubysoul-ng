@@ -20,19 +20,26 @@ module NetSoul
     attr_reader :connection_values, :authenticated, :sock
 
     def initialize
+      @main_app = nil
       @rs_config = RsConfig::instance()
       @connection_values = Hash.new
       @sock = nil
       @authenticated = false
     end
 
-    def connect
-    	begin
-    		@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-    	rescue => err
-    		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
-    		@sock = nil
-			return false
+    def connect(my_main_app = nil, my_sock = nil)
+    	@main_app = my_main_app if !my_main_app.nil?
+    	if my_sock
+    		@sock = my_sock
+    	else
+			begin
+				@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
+			rescue => err
+				STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+				@sock = nil
+				@main_app.disconnection() if !@main_app.nil?
+				return false
+			end
 		end
       buf = sock_get()
       cmd, socket_num, md5_hash, client_ip, client_port, server_timestamp = buf.split
@@ -81,15 +88,37 @@ module NetSoul
     end
 
     def sock_send(str)
-    	if !@sock.nil?
+    	begin
     		@sock.puts str.to_s.chomp
+    	rescue SocketError, Errno::ECONNRESET, Errno::TIMEDOUT => se
+    		STDERR.print "Unexpected ERROR (%s): %s\n" % [se.class, se] if $DEBUG
+    		@sock = nil
+    		reconnection = true
+			@main_app.disconnection(reconnection) if !@main_app.nil?
+    	rescue => err
+    		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+			@sock = nil
+			@main_app.disconnection() if !@main_app.nil?
     	end
     end
 
     def sock_get()
-    	if !@sock.nil?
-    		return @sock.gets
+    	res = nil
+    	begin
+    		res = @sock.gets
+    	rescue SocketError, Errno::ECONNRESET, Errno::TIMEDOUT => se
+    		STDERR.print "Unexpected ERROR (%s): %s\n" % [se.class, se] if $DEBUG
+    		@sock = nil
+    		reconnection = true
+			@main_app.disconnection(reconnection) if !@main_app.nil?
+			return nil
+    	rescue => err
+    		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+			@sock = nil
+			@main_app.disconnection() if !@main_app.nil?
+			return nil
     	end
+    	return res
     end
 
     def sock_close

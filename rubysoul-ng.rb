@@ -121,19 +121,18 @@ class RubySoulNG
       @preferences_win.set_focus(@account_unix_password_entry)
       return false
     end
-    if @ns.connect()
+    if @ns.connect(self)
       @rsng_tb_connect.set_stock_id(Gtk::Stock::DISCONNECT)
-      @rsng_tb_connect.set_label("Disconnection")
       @parse_thread = Thread.new do
       	loop do
           begin
             line = @ns.sock_get().to_s.chomp
             if !line.nil? and !line.empty?
               parse_cmd(line) # Blocking call
-              sleep(1.0) # We have time to share with another threads
             end
           rescue => err
             STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+            sleep(1.0) # We have time to share with another threads
             reconnection = true
             disconnection(reconnection)
           end
@@ -163,10 +162,7 @@ class RubySoulNG
       dialog.destroy()
     end
     @user_dialogs.clear()
-    Gtk.queue do
-      @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
-      @rsng_tb_connect.set_label("Connection")
-    end
+    @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
     @rs_contact.load_contacts()
     @user_model.clear()
     @user_model_iter_offline = @user_model.append(nil)
@@ -194,9 +190,6 @@ class RubySoulNG
     end
     Gtk.queue do
       @rsng_state_box.set_sensitive(false)
-    end
-    Gtk.queue do
-      print_offline_status()
     end
     if reconnect
       connection()
@@ -603,6 +596,10 @@ class RubySoulNG
     @contact_win.show_all()
   end
   
+  def on_tb_exit_clicked(widget)
+  	on_statusicon_delete_event()
+  end
+  
   def on_tb_preferences_clicked(widget)
     preferences_account_load_config(@rs_config.conf)
     @preferences_win.show_all()
@@ -959,15 +956,11 @@ class RubySoulNG
 
   #--- | Other stuff
   def print_init_status
-    set_status(@ctx_init_id, "#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
-  end
-  def print_offline_status
-    set_status(@ctx_offline_id, "You are not connected !!!")
+    set_status(@ctx_init_id, "by #{RsConfig::AUTHOR_FULLNAME} (c) #{Time.now.year}")
   end
   def print_online_status
     @user_online = @rs_contact.contacts.length - @user_model_iter_offline.n_children
     @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (#{@user_model_iter_offline.n_children.to_s}/#{@rs_contact.contacts.length})</span>])
-    set_status(@ctx_online_id, "Your are online | Online contacts : #{@user_online.to_s}/#{@rs_contact.contacts.length}")
   end
   def set_status(ctx_id, msg)
     @statusbar.pop(@ctx_current_id) if @ctx_current_id
