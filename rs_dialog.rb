@@ -25,7 +25,7 @@ class RsDialog < Gtk::Window
     begin
     	set_icon(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}"))
     rescue => err
-    	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+    	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
     	set_icon(Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l'))
     end
     vbox = Gtk::VBox.new
@@ -66,7 +66,7 @@ class RsDialog < Gtk::Window
     begin
     	@user_img = Gtk::Image.new(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}", 128, 128))
     rescue => err
-    	STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+    	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
     	@user_img = Gtk::Image.new(Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 128, 128))
     end
     @user_img.set_can_focus(false)

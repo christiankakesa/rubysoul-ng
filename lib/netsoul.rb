@@ -27,10 +27,13 @@ module NetSoul
     end
 
     def connect
-    	@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-      if not @sock
-        return false
-      end
+    	begin
+    		@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
+    	rescue => err
+    		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+    		@sock = nil
+			return false
+		end
       buf = sock_get()
       cmd, socket_num, md5_hash, client_ip, client_port, server_timestamp = buf.split
       server_timestamp_diff = Time.now.to_i - server_timestamp.to_i
