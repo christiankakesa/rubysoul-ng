@@ -35,7 +35,7 @@ module NetSoul
 			begin
 				@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
 			rescue => err
-				STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+				STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
 				@sock = nil
 				@main_app.disconnection() if !@main_app.nil?
 				return false
@@ -83,20 +83,30 @@ module NetSoul
     end
 
     def disconnect
-      sock_send(Message.ns_exit())
+      if !@sock.nil?
+      	sock_send(Message.ns_exit())
+      end
       sock_close()
     end
 
     def sock_send(str)
     	begin
-    		@sock.puts str.to_s.chomp
-    	rescue SocketError, Errno::ECONNRESET, Errno::TIMEDOUT => se
-    		STDERR.print "Unexpected ERROR (%s): %s\n" % [se.class, se] if $DEBUG
+    		if !@sock.nil?
+    			@sock.puts str.to_s.chomp
+    		else
+    			STDERR.puts "Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}" if $DEBUG
+				@sock = nil
+				raise RuntimeError
+				#reconnection = true
+				#@main_app.disconnection(reconnection) if !@main_app.nil?
+    		end
+    	rescue SocketError, Errno::ECONNRESET, Errno::ETIMEDOUT => se
+    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__] if $DEBUG
     		@sock = nil
     		reconnection = true
 			@main_app.disconnection(reconnection) if !@main_app.nil?
     	rescue => err
-    		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
 			@sock = nil
 			@main_app.disconnection() if !@main_app.nil?
     	end
@@ -105,15 +115,23 @@ module NetSoul
     def sock_get()
     	res = nil
     	begin
-    		res = @sock.gets
-    	rescue SocketError, Errno::ECONNRESET, Errno::TIMEDOUT => se
-    		STDERR.print "Unexpected ERROR (%s): %s\n" % [se.class, se] if $DEBUG
+    		if !@sock.nil?
+    			res = @sock.gets
+    		else
+    			STDERR.puts "Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}" if $DEBUG
+				@sock = nil
+				raise RuntimeError
+				#reconnection = true
+				#@main_app.disconnection(reconnection) if !@main_app.nil?
+    		end
+    	rescue SocketError, Errno::ECONNRESET, Errno::ETIMEDOUT => se
+    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__] if $DEBUG
     		@sock = nil
     		reconnection = true
 			@main_app.disconnection(reconnection) if !@main_app.nil?
 			return nil
     	rescue => err
-    		STDERR.print "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
 			@sock = nil
 			@main_app.disconnection() if !@main_app.nil?
 			return nil

@@ -1,4 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE glade-interface SYSTEM "glade-2.0.dtd">
 <glade-interface>
   <!-- interface-requires gtk+ 2.16 -->
   <!-- interface-naming-policy project-wide -->
@@ -348,7 +349,7 @@ SUCH DAMAGE.</property>
                             <property name="can_focus">False</property>
                             <child>
                               <widget class="GtkRadioButton" id="account_connection_type_md5">
-                                <property name="label" translatable="yes">md5</property>
+                                <property name="label" translatable="no">md5</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">False</property>
@@ -364,7 +365,7 @@ SUCH DAMAGE.</property>
                             </child>
                             <child>
                               <widget class="GtkRadioButton" id="account_connection_type_krb5">
-                                <property name="label" translatable="yes">kerberos</property>
+                                <property name="label" translatable="no">kerberos</property>
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="receives_default">False</property>
@@ -437,7 +438,7 @@ SUCH DAMAGE.</property>
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <property name="xalign">1</property>
-                            <property name="label" translatable="yes">Server port</property>
+                            <property name="label" translatable="yes">Server port : </property>
                           </widget>
                           <packing>
                             <property name="top_attach">4</property>
@@ -513,7 +514,7 @@ SUCH DAMAGE.</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="max_length">64</property>
-                            <property name="text" translatable="yes">IONIS</property>
+                            <property name="text" translatable="no">IONIS</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
                             <property name="primary_icon_sensitive">True</property>
@@ -531,7 +532,7 @@ SUCH DAMAGE.</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="max_length">15</property>
-                            <property name="text" translatable="yes">@ RubySoul-NG</property>
+                            <property name="text" translatable="no">@ RubySoul-NG</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
                             <property name="primary_icon_sensitive">True</property>
@@ -549,7 +550,7 @@ SUCH DAMAGE.</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="max_length">5</property>
-                            <property name="text" translatable="yes">4242</property>
+                            <property name="text" translatable="no">4242</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
                             <property name="primary_icon_sensitive">True</property>
@@ -567,7 +568,7 @@ SUCH DAMAGE.</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="max_length">255</property>
-                            <property name="text" translatable="yes">ns-server.epita.fr</property>
+                            <property name="text" translatable="no">ns-server.epitech.net</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
                             <property name="primary_icon_sensitive">True</property>

@@ -1,7 +1,5 @@
 =begin
-  Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
-
-  # TODO: save the config.yml file into user home dir (ie. :#{ENV['HOME']}/.rubysoul-ng/config.yml) 
+  Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com> 
 =end
 
 begin
@@ -26,11 +24,12 @@ class RsConfig
   AUTHOR_FIRSTNAME = "KAKESA"
   AUTHOR_FULLNAME = "#{AUTHOR_NAME} #{AUTHOR_FIRSTNAME}"
   AUTHOR_EMAIL = "christian.kakesa@gmail.com"
+  AUTHOR_PROMO = "etna-2008"
   AGENT = APP_NAME + " v" + APP_VERSION
   DEFAULT_SIZE_W = 290
   DEFAULT_SIZE_H = 420
   FILE_BUFFER_SIZE = 1024
-  DEFAULT_NETSOUL_SERVER_HOST = 'ns-server.epita.fr'
+  DEFAULT_NETSOUL_SERVER_HOST = 'ns-server.epitech.net'
   DEFAULT_NETSOUL_SERVER_PORT = '4242'
 
   @@theme_name = "msn"
@@ -83,7 +82,7 @@ class RsConfig
   			File.makedirs(config_home+File::SEPARATOR+APP_NAME.downcase())
   		end
   		File.open(@config_filename, File::CREAT|File::RDWR, 0600) do |f|
-  			f.write( ":login: \n:socks_password: \n:unix_password: \n:server_host: ns-server.epita.fr\n:server_port: \"4242\"\n:connection_type: md5\n:connection_at_startup: true\n:auto_reconnect: true\n:user_group: IONIS\n:location: \"@ HOME\"\n:state: actif")
+  			f.write( ":login: \n:socks_password: \n:unix_password: \n:server_host: #{DEFAULT_NETSOUL_SERVER_HOST}\n:server_port: \"#{DEFAULT_NETSOUL_SERVER_PORT}\"\n:connection_type: md5\n:connection_at_startup: true\n:auto_reconnect: true\n:user_group: IONIS\n:location: \"@ HOME\"\n:state: actif")
   		end
   	end
   end

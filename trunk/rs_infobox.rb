@@ -26,11 +26,14 @@ class RsInfobox
       info_type = Gtk::MessageDialog::WARNING
       info_button = Gtk::MessageDialog::BUTTONS_OK
     end
+    infobox = Gtk::MessageDialog.new(main_app_window, (modal ? Gtk::Dialog::MODAL : Gtk::Dialog::DESTROY_WITH_PARENT), info_type, info_button, message.to_s)
+=begin
     if modal
       infobox = Gtk::MessageDialog.new(main_app_window, Gtk::Dialog::MODAL, info_type, info_button, message.to_s)
     else
       infobox = Gtk::MessageDialog.new(main_app_window, Gtk::Dialog::DESTROY_WITH_PARENT, info_type, info_button, message.to_s)
     end
+=end
     infobox.run()
     infobox.destroy()
   end
