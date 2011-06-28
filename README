@@ -10,8 +10,8 @@ ruby >= 1.8
 ruby-gnome2 
 	For kerberos you need : ruby header, gssapi header, krb5 header
 [RUN RubySoul-NG]
-Just type : ruby rubysoul-ng.rg
-	for kerberos authentication : cd lib/kerberos && ruby extconf.rb && make && cd ../..
+Just type : ruby rubysoul-ng.rb
+	for kerberos authentication : cd lib/kerberos && ruby extconf.rb && make && cd ../.. && ruby rubysoul-ng.rb
 
 [BUGS REPORT]
 Author :: Christian KAKESA <christian.kakesa@gmail.com>

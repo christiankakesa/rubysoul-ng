@@ -86,9 +86,9 @@ class RubySoulNG
       begin
        	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
       rescue => err
- 				STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
- 				h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
- 			end
+ 		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
+ 		h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+ 	  end
       h.set_value(3, key.to_s)
       h.set_value(4, "num_session")
       h.set_value(5, "status")
@@ -103,7 +103,7 @@ class RubySoulNG
 
   def connection
     if @ns.nil?
-      @ns = NetSoul::NetSoul::instance()
+      @ns = NetSoul::NetSoul::instance(self)
     end
     if @rs_config.conf[:login].to_s.length == 0
       @preferences_win.show_all()
@@ -131,7 +131,7 @@ class RubySoulNG
               parse_cmd(line) # Blocking call
             end
           rescue => err
-            STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+            STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
             sleep(1.0) # We have time to share with another threads
             reconnection = true
             disconnection(reconnection)
@@ -178,7 +178,7 @@ class RubySoulNG
         begin
          	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
         rescue => err
-        	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+        	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
          	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
         end
         h.set_value(3, key.to_s)
@@ -244,7 +244,7 @@ class RubySoulNG
               begin
                 iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
               rescue => err
-              	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+              	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
                 iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
               end
             else
@@ -268,7 +268,7 @@ class RubySoulNG
         @ns.sock_send(msg)
       end
     rescue => err
-      STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+      STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
       reconnection = true
       disconnection(reconnection)
     end
@@ -421,7 +421,7 @@ class RubySoulNG
           begin
             iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
           rescue => err
-          	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+          	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
             iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -438,7 +438,7 @@ class RubySoulNG
             begin
               iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
             rescue => err
-            	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+              STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
               iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
             end
             iter.set_value(3, login.to_s)
@@ -514,7 +514,7 @@ class RubySoulNG
           begin
             iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
           rescue => err
-          	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+          	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
             iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -537,7 +537,7 @@ class RubySoulNG
             begin
               iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
             rescue => err
-            	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+            	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
               iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
             end
             iter.set_value(3, login.to_s)
@@ -580,7 +580,7 @@ class RubySoulNG
   def on_tb_connect_clicked(widget)
     begin
       if @ns.nil?
-        @ns = NetSoul::NetSoul::instance()
+        @ns = NetSoul::NetSoul::instance(self)
       end
       if @ns.authenticated
         disconnection()
@@ -699,7 +699,7 @@ class RubySoulNG
         begin
         	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
         rescue => err
-        	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+        	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
         	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32)) 
         end
         iter.set_value(3, login.to_s)
@@ -715,7 +715,7 @@ class RubySoulNG
           begin
           	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
           rescue => err
-          	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+          	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
           	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
           end
           iter.set_value(3, login.to_s)
@@ -731,7 +731,7 @@ class RubySoulNG
         begin
         	iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
         rescue => err
-        	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+        	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
          	iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
         end
         iter.set_value(3, login.to_s)
@@ -859,7 +859,7 @@ class RubySoulNG
       begin
        	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
       rescue => err
-      	STDERR.puts "Unexpected ERROR (%s): %s\n" % [err.class, err] if $DEBUG
+      	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
        	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
       end
       h.set_value(3, login.to_s)
@@ -911,7 +911,7 @@ class RubySoulNG
     if conf[:server_port].to_s.length > 0
       @account_server_port_entry.text = conf[:server_port].to_s
     else
-      @account_server_port_entry.text = conf[:server_port] = RsConfig::DEFAULT_NETSOUL_SERVER_HOST
+      @account_server_port_entry.text = conf[:server_port] = RsConfig::DEFAULT_NETSOUL_SERVER_PORT
     end
     conf[:connection_type].eql?("krb5") ? @account_connection_type_krb5.set_active(true) : @account_connection_type_md5.set_active(true)
     if conf[:location].to_s.length > 0
@@ -929,9 +929,9 @@ class RubySoulNG
     @rs_config.conf[:server_host] = @account_server_host_entry.text.to_s if @account_server_host_entry.text.length > 0
     @rs_config.conf[:server_port] = @account_server_port_entry.text.to_s if @account_server_port_entry.text.length > 0
     ns_token_found = false
-    ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.so")
-    ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dylib")
-    ns_token_found = true if FileTest.exist?(RsConfig::APP_DIR+File::SEPARATOR+"lib/kerberos/NsToken.dll")
+    if have_ns_token()
+    	ns_token_found = true
+    end
     @rs_config.conf[:connection_type] = @account_connection_type_krb5.active?() && ns_token_found ? "krb5" : "md5"
     if @account_connection_type_krb5.active?() && !ns_token_found
       RsInfobox.new(@rsng_win, "NsToken is not build for kerberos authentication, MD5 authentication selected", "warning")
@@ -956,7 +956,7 @@ class RubySoulNG
 
   #--- | Other stuff
   def print_init_status
-    set_status(@ctx_init_id, "by #{RsConfig::AUTHOR_FULLNAME} (c) #{Time.now.year}")
+    set_status(@ctx_init_id, "by #{RsConfig::AUTHOR_FULLNAME} #{RsConfig::AUTHOR_PROMO} - (c) #{Time.now.year}")
   end
   def print_online_status
     @user_online = @rs_contact.contacts.length - @user_model_iter_offline.n_children
@@ -966,6 +966,26 @@ class RubySoulNG
     @statusbar.pop(@ctx_current_id) if @ctx_current_id
     @statusbar.push(ctx_id, msg.to_s)
     @ctx_current_id = ctx_id
+  end
+  
+  def have_ns_token
+  	res = false
+  	filename_prefix = RsConfig::APP_DIR+File::SEPARATOR+"lib"+File::SEPARATOR+"kerberos"+File::SEPARATOR+"NsToken"
+  	case RUBY_PLATFORM
+  	when /mswin/
+  		if FileTest.exist?(filename_prefix+".dll")
+  			res = true
+  		end
+    when /darwin/
+    	if FileTest.exist?(filename_prefix+".dylib")
+    		res = true
+    	end
+    else # Assuming unix platform
+    	if FileTest.exist?(filename_prefix+".so")
+    		res = true
+    	end
+    end
+    return res
   end
 end
 
