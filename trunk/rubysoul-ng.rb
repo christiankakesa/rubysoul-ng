@@ -70,10 +70,13 @@ class RubySoulNG
     @ctx_current_id = @ctx_init_id
     @user_online = 0
     @user_dialogs = Hash.new
-    @rs_config = RsConfig::instance()
-    @rs_contact = RsContact::instance()
     @mutex_send_msg = Mutex.new
     @parse_thread = nil
+    @rs_config = RsConfig::instance()
+    @rs_contact = RsContact::instance()
+    if @rs_contact.contacts.length > 0
+		@rs_contact.get_users_photo()
+	end
     rsng_user_view_init()
     rsng_state_box_init()
     print_init_status()
@@ -141,11 +144,13 @@ class RubySoulNG
       Gtk.queue do
         rsng_state_box_update()
       end
-			send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
-			send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
       Gtk.queue do
         print_online_status()
       end
+      if @rs_contact.contacts.length > 0
+		send_cmd( NetSoul::Message.who_users(@rs_contact.get_users_list()) )
+		send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+	  end
       return true
     else
       RsInfobox.new(@rsng_win, "Impossible to connect to the NetSoul server : \n\t- Try to reconnect", "error", false)
@@ -650,7 +655,9 @@ class RubySoulNG
         @user_dialogs[login.to_sym].present()
       end
     end
-    @rsng_user_view_menu_delete =  Gtk::MenuItem.new("Delete")
+    @rsng_user_view_menu = Gtk::Menu.new
+    @rsng_user_view_menu_delete =  Gtk::ImageMenuItem.new(Gtk::Stock::DELETE)
+    @rsng_user_view_menu_delete.set_always_show_image(true);
     @rsng_user_view_menu_delete.signal_connect("activate") do |widget, event|
       iter = @rsng_user_view.selection.selected
       if iter
@@ -666,8 +673,25 @@ class RubySoulNG
         end
       end
     end
-    @rsng_user_view_menu = Gtk::Menu.new
     @rsng_user_view_menu.append(@rsng_user_view_menu_delete)
+    @rsng_user_view_menu_refresh =  Gtk::ImageMenuItem.new(Gtk::Stock::REFRESH)
+    @rsng_user_view_menu_refresh.set_always_show_image(true);
+    @rsng_user_view_menu_refresh.signal_connect("activate") do |widget, event|
+      iter = @rsng_user_view.selection.selected
+      if iter
+        if (iter[8].to_s != "children" || iter[4].to_s == "num_session")
+          login = iter[3]
+          RsContact::instance().get_user_photo(login)
+		    begin
+		      iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+		    rescue => err
+		    	STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
+		      iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+		    end
+        end
+      end
+    end
+    @rsng_user_view_menu.append(@rsng_user_view_menu_refresh)
     @rsng_user_view.signal_connect("button-press-event") do |widget, event|
       if event.kind_of? Gdk::EventButton
         if (event.button.to_i == 3)
@@ -783,30 +807,32 @@ class RubySoulNG
     @rsng_state_box.set_sensitive(false)
     @rsng_state_box.signal_connect("changed") do
       if (@ns.authenticated)
-        send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
-        @rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
-        @rs_config.save()
+        if @rs_config.conf[:state] != @rsng_state_box.active_iter[2].to_s.downcase()
+        	send_cmd( NetSoul::Message.set_state(@rsng_state_box.active_iter[2].to_s.downcase(), @ns.get_server_timestamp()) )
+        	@rs_config.conf[:state] = @rsng_state_box.active_iter[2].to_s.downcase()
+        	@rs_config.save()
+        end
       end
     end
   end
-  
+
   def rsng_state_box_update
+	case @rs_config.conf[:state]
+	when "actif"
+		@rsng_state_box.active = 0
+	when "away"
+		@rsng_state_box.active = 1
+	when "busy"
+		@rsng_state_box.active = 2
+	when "idle"
+		@rsng_state_box.active = 3
+	when "lock"
+		@rsng_state_box.active = 4
+	else
+		@rsng_state_box.active = 0
+	end
     if (@ns.authenticated)
       @rsng_state_box.set_sensitive(true)
-      case @rs_config.conf[:state]
-      when "actif"
-        @rsng_state_box.active = 0
-      when "away"
-        @rsng_state_box.active = 1
-      when "busy"
-        @rsng_state_box.active = 2
-      when "idle"
-        @rsng_state_box.active = 3
-      when "lock"
-        @rsng_state_box.active = 4
-      else
-        @rsng_state_box.active = 0
-      end
     else
       @rsng_state_box.set_sensitive(false)
     end
@@ -852,7 +878,7 @@ class RubySoulNG
       login = @contact_add_entry.text
       @rs_contact.add(login, true)
       @contact_add_entry.text = ""
-      @rs_contact.get_users_photo()
+      @rs_contact.get_user_photo(login)
       h = @user_model.append(@user_model_iter_offline)
       h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
       h.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
