@@ -92,7 +92,7 @@ module NetSoul
     def sock_send(str)
     	begin
     		if !@sock.nil?
-    			@sock.puts str.to_s.chomp
+    			@sock.puts str.to_s
     		else
     			STDERR.puts "Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}" if $DEBUG
 				@sock = nil

@@ -69,7 +69,7 @@ class RsStatusIcon < Gtk::StatusIcon
 
 			menu.append(Gtk::SeparatorMenuItem.new)
 			
-      menuitem = Gtk::ImageMenuItem.new(Gtk::Stock::CLOSE)
+      menuitem = Gtk::ImageMenuItem.new(Gtk::Stock::QUIT)
       menuitem.signal_connect("activate"){
         set_visible(false)
         @main_app.on_statusicon_delete_event()

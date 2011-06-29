@@ -18,9 +18,8 @@ class RsContact
 
   def initialize()
     @rs_config = RsConfig::instance()
-    load_contacts()
     @url_photo = @rs_config.contacts_photo_url #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
-    get_users_photo()
+    load_contacts()
   end
 
   def load_contacts
@@ -92,20 +91,24 @@ class RsContact
     end
     @contacts.each do |k, v|
       if not (files.include?(k.to_s))
-        begin
-          hh = open(@url_photo + k.to_s, "rb")
-        rescue
-          puts "Error: #{$!}"
-        end
-        if (hh)
-          h = File.open(dest_dir + File::SEPARATOR + k.to_s, "wb")
-          if (h)
-            h.write(hh.read)
-            h.close
-          end
-          hh.close
-        end
+        get_user_photo(k)
       end
+    end
+  end
+  
+  def get_user_photo(login)
+	begin
+      hh = open(@url_photo + login.to_s, "rb")
+    rescue
+      puts "Error: #{$!}"
+    end
+    if (hh)
+      h = File.open(@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s, "wb")
+      if (h)
+        h.write(hh.read)
+        h.close
+      end
+      hh.close
     end
   end
 end
