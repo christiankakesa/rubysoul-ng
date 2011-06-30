@@ -53,3 +53,4 @@ void Init_NsToken()
 	rb_define_method(cNsToken, "initialize", k_init, 0);
 	rb_define_method(cNsToken, "get_token", k_get_token, 2);
 }
+
