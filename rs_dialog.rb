@@ -8,12 +8,10 @@ begin
 	require 'rs_config'
 	require 'rs_infobox'
 rescue LoadError
-	puts "Error: #{$!}"
-	exit
+	puts "Error: #{$!}"; exit!;
 end
 
 class RsDialog < Gtk::Window
-	#attr_accessor :receive_msg
 
 	def initialize(login, num_session)
 		super("#{login.to_s} : #{num_session}")
@@ -25,7 +23,7 @@ class RsDialog < Gtk::Window
 		begin
 			set_icon(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}"))
 		rescue => err
-			STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
+			$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 			set_icon(Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l'))
 		end
 		vbox = Gtk::VBox.new
@@ -66,7 +64,7 @@ class RsDialog < Gtk::Window
 		begin
 			@user_img = Gtk::Image.new(Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+@login}", 128, 128))
 		rescue => err
-			STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
+			$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 			@user_img = Gtk::Image.new(Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 128, 128))
 		end
 		@user_img.set_can_focus(false)
@@ -149,25 +147,25 @@ class RsDialog < Gtk::Window
 			RsInfobox.new(self, __FILE__.to_s + "/" + __LINE__.to_s + " : " + "#{$!}", "error") if $DEBUG
 		end
 	end
-	
+
 	def send_start_typing
 		@ns.sock_send(NetSoul::Message.start_writing_to_user(@login))
 		@send_typing = true
 	end
-	
+
 	def send_stop_typing
 		@ns.sock_send(NetSoul::Message.stop_writing_to_user(@login))
 		@send_typing = false
 	end
-	
+
 	def print_user_typing_status
 		set_status(@ctx_user_typing_id, "#{@login} is typing...")
 	end
-	
+
 	def print_init_status
 		set_status(@ctx_init_id, "#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")
 	end
-	
+
 	def set_status(ctx_id, msg)
 		@statusbar.pop(@ctx_current_id) if @ctx_current_id
 		@statusbar.push(ctx_id, msg.to_s)

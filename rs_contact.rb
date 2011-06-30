@@ -7,8 +7,7 @@ begin
 	require 'singleton'
 	require 'rs_infobox'
 rescue LoadError
-	puts "Error: #{$!}"
-	exit
+	puts "Error: #{$!}"; exit!;
 end
 
 class RsContact
@@ -36,7 +35,7 @@ class RsContact
 				@contacts[login.to_sym] = Hash.new
 				save() if save_it
 			else
-				raise(StandardError, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nThis limitation is server limit, sorry.")
+				raise(StandardError, "NetSoul server is not able to manage more contacts status for you.\nRemove one or more contacts before adding another.\nThis limitation is made by Netsoul server, sorry.")
 			end
 		end
 	end
@@ -95,12 +94,12 @@ class RsContact
 			end
 		end
 	end
-	
+
 	def get_user_photo(login)
-	begin
+	  begin
 			hh = open(@url_photo + login.to_s, "rb")
 		rescue
-			puts "Error: #{$!}"
+			$log.warn("Error: #{$!}")
 		end
 		if (hh)
 			h = File.open(@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s, "wb")

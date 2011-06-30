@@ -6,8 +6,7 @@ begin
 	require 'gtk2'
 	require 'rs_contact'
 rescue LoadError
-	puts "Error: #{$!}"
-	exit
+	puts "Error: #{$!}"; exit!;
 end
 
 class RsTooltip < Gtk::Tooltips
@@ -22,7 +21,7 @@ class RsTooltip < Gtk::Tooltips
 				if not path.nil?()
 					iter = @parent_widget.model.get_iter(path)
 					if not @current_iter.equal?(iter)
-						if (!iter.has_child?() && iter.parent().nil?() && iter[3].to_s != "zzzzzz_z") 
+						if (!iter.has_child?() && iter.parent().nil?() && iter[3].to_s != "zzzzzz_z")
 							set_tip(@parent_widget, build_text(iter), nil)
 						elsif (iter.has_child?() && iter.parent().nil?() && iter[3].to_s != "zzzzzz_z")
 							child = iter.first_child
@@ -40,7 +39,7 @@ class RsTooltip < Gtk::Tooltips
 			end
 		end
 	end
-	
+
 	def build_text(iter)
 		res  = "#{iter[3].to_s.upcase()}\n"
 		res += "Session   : #{iter[4].to_s}\n"

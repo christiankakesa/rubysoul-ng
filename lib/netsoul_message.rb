@@ -10,7 +10,7 @@ begin
   require 'rs_config'
   require 'rs_infobox'
 rescue LoadError
-  puts "Error: #{$!}"
+  puts "Error: #{$!}"; exit!;
 end
 
 module NetSoul
@@ -30,13 +30,13 @@ module NetSoul
 		  begin
 		    require 'lib/kerberos/NsToken'
 		  rescue LoadError
-		    puts "Error: #{$!}"
-		    puts "Build the \"NsToken\" ruby/c extension if you don't.\nSomething like this : \"cd ./lib/kerberos && ruby extconf.rb && make\""
+		    $log.warn("Error: #{$!}")
+		    $log.warn("Build the \"NsToken\" ruby/c extension if you don't.\nSomething like this : \"cd ./lib/kerberos && ruby extconf.rb && make\"")
 		    return
 		  end
 		  tk = NsToken.new
 		  if not tk.get_token(connection_values[:login], connection_values[:unix_password])
-		    puts "Impossible to retrieve the kerberos token !!!"
+		    $log.info("Impossible to retrieve the kerberos token !!!")
 		    return
 		  end
 		  return 'ext_user_klog %s %s %s %s %s'%[tk.token_base64.slice(0, 812), Message.escape(connection_values[:system]), Message.escape(connection_values[:location]), Message.escape(connection_values[:user_group]), Message.escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
@@ -73,35 +73,35 @@ module NetSoul
 		def self.set_user_data(data)
 		  return 'user_cmd user_data %s'%[Message.escape(data.to_s)]
 		end
-		
+
 		def self.xfer(user, id, filename, size, desc)
 				return 'user_cmd msg_user %s desoul_ns_xfer %s'%[user.to_s, id.to_s, Message.escape(filename.to_s), size.to_s, Message.escape(desc.to_s)]
 		end
-		
+
 		def self.desoul_ns_xfer(user, id, filename, size, desc)
 				return 'user_cmd msg_user %s desoul_ns_xfer %s'%[user.to_s, Message.escape("#{id.to_s} #{filename.to_s} #{size.to_s} #{desc.to_s}")]
 		end
-		
+
 		def self.xfer_accept(user, id)
 				return 'user_cmd msg_user %s desoul_ns_xfer_accept %s'%[user.to_s, id.to_s]
 		end
-		
+
 		def self.desoul_ns_xfer_accept(id)
 				return 'user_cmd msg_user %s desoul_ns_xfer_accept %s'%[user.to_s, id.to_s]
 		end
-		
+
 		def self.xfer_data(id, data)
 				return 'user_cmd msg_user %s desoul_ns_xfer_data %s'%[user.to_s, Message.escape("#{id.to_s} #{Base64.b64encode(data.to_s, data.to_s.length)}")]
 		end
-		
+
 		def self.desoul_ns_xfer_data(id, data)
 				return 'user_cmd msg_user %s desoul_ns_xfer_data %s'%[user.to_s, Message.escape("#{id.to_s} #{Base64.b64encode(data.to_s, data.to_s.length)}")]
 		end
-		
+
 		def self.xfer_cancel(user, id)
 				return 'user_cmd msg_user %s desoul_ns_xfer_cancel %s'%[user.to_s, id.to_s]
 		end
-		
+
 		def self.desoul_ns_xfer_cancel(id)
 				return 'user_cmd msg_user %s desoul_ns_xfer_cancel %s'%[user.to_s, id.to_s]
 		end
@@ -120,7 +120,7 @@ module NetSoul
 		  str = URI.escape(str, Regexp.new("[^#{URI::PATTERN::ALNUM}]", false, 'N'))
 		  return str
 		end
-		
+
 		def self.unescape(str)
 			str = URI.unescape(str)
 			str = GLib.convert(str, 'UTF-8//TRANSLIT', 'ISO-8859-15//TRANSLIT')
