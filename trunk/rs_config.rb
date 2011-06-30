@@ -1,5 +1,5 @@
 =begin
-	Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com> 
+	Made by Christian KAKESA etna_2008(paris) <christian.kakesa@gmail.com>
 =end
 
 begin
@@ -8,8 +8,7 @@ begin
 	require 'yaml'
 	require 'singleton'
 rescue LoadError
-	puts "Error: #{$!}"
-	exit
+	puts "Error: #{$!}"; exit!;
 end
 
 class RsConfig
@@ -60,11 +59,11 @@ class RsConfig
 			my_config_home_init()
 			my_data_home_init()
 		rescue
-			puts "Error: #{$!}"; exit;
+			$log.error("Error: #{$!}")
 		end
 		load_config()
 	end
-	
+
 	def my_config_home_init
 		if not GLib.getenv('XDG_CONFIG_HOME')
 			config_home = GLib.home_dir+File::SEPARATOR+'.config'
@@ -86,7 +85,7 @@ class RsConfig
 			end
 		end
 	end
-	
+
 	def my_data_home_init
 		if not GLib.getenv('XDG_DATA_HOME')
 			data_home = GLib.home_dir+File::SEPARATOR+'.local'+File::SEPARATOR+'share'
@@ -119,7 +118,7 @@ class RsConfig
 			@contacts_photo_url = 'http://intra/photo.php?login='
 		end
 	end
-	
+
 	def in_pie? #TODO: need to be implemented
 		return false
 	end

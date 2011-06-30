@@ -6,8 +6,7 @@ begin
 	require 'gtk2'
 	require 'rs_config'
 rescue LoadError
-	puts "Error: #{$!}"
-	exit
+	puts "Error: #{$!}"; exit!;
 end
 
 class RsStatusIcon < Gtk::StatusIcon
@@ -42,7 +41,7 @@ class RsStatusIcon < Gtk::StatusIcon
 				@main_app.on_tb_connect_clicked(w)
 			}
 			menu.append(menuitem)
-			
+
 			menu.append(Gtk::SeparatorMenuItem.new)
 
 			menuitem = Gtk::ImageMenuItem.new(Gtk::Stock::ADD)
@@ -57,7 +56,7 @@ class RsStatusIcon < Gtk::StatusIcon
 				@main_app.on_tb_preferences_clicked(w)
 			}
 			menu.append(menuitem)
-			
+
 			menu.append(Gtk::SeparatorMenuItem.new)
 
 			menuitem = Gtk::ImageMenuItem.new(Gtk::Stock::ABOUT)
@@ -68,7 +67,7 @@ class RsStatusIcon < Gtk::StatusIcon
 			menu.append(menuitem)
 
 			menu.append(Gtk::SeparatorMenuItem.new)
-			
+
 			menuitem = Gtk::ImageMenuItem.new(Gtk::Stock::QUIT)
 			menuitem.signal_connect("activate"){
 				set_visible(false)

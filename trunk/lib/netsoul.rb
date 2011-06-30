@@ -8,15 +8,17 @@ begin
   require 'lib/netsoul_location'
   require 'lib/netsoul_message'
 rescue LoadError
-  puts "Error: #{$!}"
-  exit
+  puts "Error: #{$!}"; exit!;
 end
+
+$log = Logger.new(STDOUT)
+$log = Logger.new(STDERR)
+$log.level = Logger::DEBUG if $DEBUG
 
 module NetSoul
   class NetSoul
     include Singleton
 
-    # attr_accessor :sock
     attr_reader :connection_values, :authenticated, :sock
 
     def initialize
@@ -35,7 +37,7 @@ module NetSoul
 			begin
 				@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
 			rescue => err
-				STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
+				$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 				@sock = nil
 				@main_app.disconnection() if !@main_app.nil?
 				return false
@@ -94,21 +96,19 @@ module NetSoul
     		if !@sock.nil?
     			@sock.puts str.to_s
     		else
-    			STDERR.puts "Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}" if $DEBUG
-				@sock = nil
-				raise SocketError
-				#reconnection = true
-				#@main_app.disconnection(reconnection) if !@main_app.nil?
+    			$log.debug("Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}")
+				  @sock = nil
+				  raise SocketError
     		end
     	rescue SocketError, Errno::EPIPE, Errno::ECONNRESET, Errno::ETIMEDOUT => se
-    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__] if $DEBUG
+    		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__])
     		@sock = nil
     		reconnection = true
-			@main_app.disconnection(reconnection) if !@main_app.nil?
+			  @main_app.disconnection(reconnection) if !@main_app.nil?
     	rescue => err
-    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
-			@sock = nil
-			@main_app.disconnection() if !@main_app.nil?
+    		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+			  @sock = nil
+			  @main_app.disconnection() if !@main_app.nil?
     	end
     end
 
@@ -118,23 +118,21 @@ module NetSoul
     		if !@sock.nil?
     			res = @sock.gets
     		else
-    			STDERR.puts "Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}" if $DEBUG
-				@sock = nil
-				raise RuntimeError
-				#reconnection = true
-				#@main_app.disconnection(reconnection) if !@main_app.nil?
+    			$log.debug("Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}")
+				  @sock = nil
+				  raise RuntimeError
     		end
     	rescue SocketError, Errno::ECONNRESET, Errno::ETIMEDOUT => se
-    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__] if $DEBUG
+    		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__])
     		@sock = nil
     		reconnection = true
-			@main_app.disconnection(reconnection) if !@main_app.nil?
-			return nil
+			  @main_app.disconnection(reconnection) if !@main_app.nil?
+			  return nil
     	rescue => err
-    		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__] if $DEBUG
-			@sock = nil
-			@main_app.disconnection() if !@main_app.nil?
-			return nil
+    		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+			  @sock = nil
+			  @main_app.disconnection() if !@main_app.nil?
+			  return nil
     	end
     	return res
     end
