@@ -96,7 +96,7 @@ module NetSoul
     		else
     			STDERR.puts "Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}" if $DEBUG
 				@sock = nil
-				raise RuntimeError
+				raise SocketError
 				#reconnection = true
 				#@main_app.disconnection(reconnection) if !@main_app.nil?
     		end
