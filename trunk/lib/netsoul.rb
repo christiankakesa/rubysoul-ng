@@ -100,7 +100,7 @@ module NetSoul
 				#reconnection = true
 				#@main_app.disconnection(reconnection) if !@main_app.nil?
     		end
-    	rescue SocketError, Errno::ECONNRESET, Errno::ETIMEDOUT => se
+    	rescue SocketError, Errno::EPIPE, Errno::ECONNRESET, Errno::ETIMEDOUT => se
     		STDERR.puts "Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__] if $DEBUG
     		@sock = nil
     		reconnection = true
