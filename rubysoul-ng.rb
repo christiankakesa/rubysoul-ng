@@ -662,24 +662,6 @@ class RubySoulNG
 			end
 		end
 		@rsng_user_view_menu = Gtk::Menu.new
-		@rsng_user_view_menu_delete =  Gtk::ImageMenuItem.new(Gtk::Stock::DELETE)
-		@rsng_user_view_menu_delete.set_always_show_image(true);
-		@rsng_user_view_menu_delete.signal_connect("activate") do |widget, event|
-			iter = @rsng_user_view.selection.selected
-			if iter
-				if (iter[8].to_s != "children" || iter[4].to_s == "num_session")
-					login = iter[3]
-					@user_model.remove(iter)
-					@rs_contact.remove(login.to_s, true)
-					if @user_dialogs.include?(login.to_sym)
-						@user_dialogs[login.to_sym].destroy()
-						@user_dialogs.delete(login.to_sym)
-					end
-					send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
-				end
-			end
-		end
-		@rsng_user_view_menu.append(@rsng_user_view_menu_delete)
 		@rsng_user_view_menu_refresh =  Gtk::ImageMenuItem.new(Gtk::Stock::REFRESH)
 		@rsng_user_view_menu_refresh.set_always_show_image(true);
 		@rsng_user_view_menu_refresh.signal_connect("activate") do |widget, event|
@@ -698,6 +680,25 @@ class RubySoulNG
 			end
 		end
 		@rsng_user_view_menu.append(@rsng_user_view_menu_refresh)
+		@rsng_user_view_menu_delete =  Gtk::ImageMenuItem.new(Gtk::Stock::DELETE)
+		@rsng_user_view_menu_delete.set_always_show_image(true);
+		@rsng_user_view_menu_delete.signal_connect("activate") do |widget, event|
+			iter = @rsng_user_view.selection.selected
+			if iter
+				if (iter[8].to_s != "children" || iter[4].to_s == "num_session")
+					login = iter[3]
+					@user_model.remove(iter)
+					@rs_contact.remove(login.to_s, true)
+					if @user_dialogs.include?(login.to_sym)
+						@user_dialogs[login.to_sym].destroy()
+						@user_dialogs.delete(login.to_sym)
+					end
+					$log.debug("User #{login} deleted")
+					send_cmd( NetSoul::Message.watch_users(@rs_contact.get_users_list()) )
+				end
+			end
+		end
+		@rsng_user_view_menu.append(@rsng_user_view_menu_delete)
 		@rsng_user_view.signal_connect("button-press-event") do |widget, event|
 			if event.kind_of? Gdk::EventButton
 				if (event.button.to_i == 3)
