@@ -96,9 +96,11 @@ class RsContact
 	end
 
 	def get_user_photo(login)
+	  #TODO: Retrieve proxy setting in application preferences or in ENV['http_proxy']
     begin
       Net::HTTP.start(@rs_config.contacts_photo_url) do |http|
-        resp = http.get('/' + @rs_config.contacts_photo_url_path + login.to_s)
+        resp = http.get('/' + @rs_config.contacts_photo_url_path + login.to_s, {"User-Agent" =>
+        "#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}"})
         $log.debug("Writing #{@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s} user photo file")
         File.open(@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s, "wb") do |file|
           file.write(resp.body)
