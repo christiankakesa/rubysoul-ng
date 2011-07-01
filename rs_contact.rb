@@ -3,7 +3,7 @@
 =end
 
 begin
-	require 'open-uri'
+	require 'net/http'
 	require 'singleton'
 	require 'rs_infobox'
 rescue LoadError
@@ -13,11 +13,10 @@ end
 class RsContact
 	include Singleton
 
-	attr_accessor :contacts, :url_photo
+	attr_accessor :contacts
 
 	def initialize()
 		@rs_config = RsConfig::instance()
-		@url_photo = @rs_config.contacts_photo_url #--- | chck if are in PIE for locale url : http://intra/photo.php?login=
 		load_contacts()
 	end
 
@@ -90,25 +89,24 @@ class RsContact
 		end
 		@contacts.each do |k, v|
 			if not (files.include?(k.to_s))
+			  $log.debug("Retrieving #{k.to_s} user photo")
 				get_user_photo(k)
 			end
 		end
 	end
 
 	def get_user_photo(login)
-	  begin
-			hh = open(@url_photo + login.to_s, "rb")
-		rescue
-			$log.warn("Error: #{$!}")
-		end
-		if (hh)
-			h = File.open(@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s, "wb")
-			if (h)
-				h.write(hh.read)
-				h.close
-			end
-			hh.close
-		end
+    begin
+      Net::HTTP.start(@rs_config.contacts_photo_url) do |http|
+        resp = http.get('/' + @rs_config.contacts_photo_url_path + login.to_s)
+        $log.debug("Writing #{@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s} user photo file")
+        File.open(@rs_config.contacts_photo_dir + File::SEPARATOR + login.to_s, "wb") do |file|
+          file.write(resp.body)
+        end
+      end
+    rescue => err
+      $log.warn("#{err}")
+    end
 	end
 end
 
