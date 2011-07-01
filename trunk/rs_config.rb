@@ -52,7 +52,7 @@ class RsConfig
 	ICON_STATE_DISCONNECT = "#{THEME_DIR+File::SEPARATOR}StateDisconnect.png"
 
 	attr_accessor :conf
-	attr_reader		:config_filename, :contacts_filename, :contacts_photo_dir, :contacts_photo_url
+	attr_reader		:config_filename, :contacts_filename, :contacts_photo_dir, :contacts_photo_url, :contacts_photo_url_path
 
 	def initialize
 		begin
@@ -113,9 +113,11 @@ class RsConfig
 			File.makedirs(@contacts_photo_dir)
 		end
 		if not in_pie?()
-			@contacts_photo_url = 'http://www.epitech.eu/intra/photo.php?login='
+			@contacts_photo_url = 'www.epitech.eu'
+			@contacts_photo_url_path = 'intra/photo.php?login='
 		else
-			@contacts_photo_url = 'http://intra/photo.php?login='
+			@contacts_photo_url = 'intra'
+			@contacts_photo_url_path = 'photo.php?login='
 		end
 	end
 
