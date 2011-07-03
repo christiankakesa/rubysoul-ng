@@ -34,15 +34,15 @@ module NetSoul
     	if my_sock
     		@sock = my_sock
     	else
-			begin
-				@sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-			rescue => err
-				$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
-				@sock = nil
-				@main_app.disconnection() if !@main_app.nil?
-				return false
-			end
-		end
+			  begin
+				  @sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
+			  rescue => err
+				  $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+				  @sock = nil
+				  @main_app.disconnection() if !@main_app.nil?
+				  return false
+			  end
+      end
       buf = sock_get()
       cmd, socket_num, md5_hash, client_ip, client_port, server_timestamp = buf.split
       server_timestamp_diff = Time.now.to_i - server_timestamp.to_i
@@ -68,7 +68,7 @@ module NetSoul
         return false
       end
 
-      if (@rs_config.conf[:connection_type].to_s == "krb5")
+      if (@rs_config.conf[:connection_type].to_s == RsConfig::APP_CONNECTION_TYPE_KERBEROS)
         sock_send(Message.kerberos_authentication(@connection_values))
       else
         sock_send(Message.standard_authentication(@connection_values))

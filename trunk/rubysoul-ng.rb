@@ -62,8 +62,8 @@ class RubySoulNG
 		@preferences_win = @glade['preferences']
 		@preferences_nbook = @glade['prefs']
 		@account_login_entry = @glade['account_login_entry']
-		@account_socks_password_entry = @glade['account_socks_password_entry']
 		@account_unix_password_entry = @glade['account_unix_password_entry']
+		@account_socks_password_entry = @glade['account_socks_password_entry']
 		@aboutdialog = @glade['aboutdialog']
 		@aboutdialog.set_name(RsConfig::APP_NAME)
 		@aboutdialog.set_version(RsConfig::APP_VERSION)
@@ -100,11 +100,18 @@ class RubySoulNG
 			h.set_value(7, "location")
 		end
 		@ns = nil
-		Thread.new do
-		  if @rs_contact.contacts.length > 0
-		    $log.debug("Getting users photo")
+		if @rs_contact.contacts.length > 0
+		  $log.debug("Getting users photo")
+		  begin
 		    @rs_contact.get_users_photo()
-	    end
+      rescue => err
+        $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+        RsInfobox.new(@rsng_win, "%s\nChecks your Account or Proxy settings" % [err], "error", false)
+		    @preferences_win.show_all()
+		    @preferences_nbook.set_page(0)
+      end
+	  end
+    Thread.new do
 		  if @rs_config.conf[:connection_at_startup]
 		    $log.debug("Connecting at startup")
 		    Gtk.queue do
@@ -123,12 +130,12 @@ class RubySoulNG
 			@preferences_nbook.set_page(0)
 			@preferences_win.set_focus(@account_login_entry)
 			return false
-		elsif @rs_config.conf[:socks_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?("md5")
+		elsif @rs_config.conf[:socks_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?(RsConfig::APP_CONNECTION_TYPE_MD5)
 			@preferences_win.show_all()
 			@preferences_nbook.set_page(0)
 			@preferences_win.set_focus(@account_socks_password_entry)
 			return false
-		elsif @rs_config.conf[:unix_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?("krb5")
+		elsif @rs_config.conf[:unix_password].to_s.length == 0 && @rs_config.conf[:connection_type].to_s.eql?(RsConfig::APP_CONNECTION_TYPE_KERBEROS)
 			@preferences_win.show_all()
 			@preferences_nbook.set_page(0)
 			@preferences_win.set_focus(@account_unix_password_entry)
@@ -170,7 +177,7 @@ class RubySoulNG
 		end
 	end
 	def disconnection(reconnect = false)
-		@ns.disconnect()
+		@ns.disconnect() if @ns
 		@parse_thread.exit() if (@parse_thread.is_a?(Thread) && @parse_thread.alive?)
 		@parse_thread = nil
 		if (!reconnect)
@@ -499,12 +506,9 @@ class RubySoulNG
 					end
 				end
 			end
-=begin
-			TODO : set_active method is out of date
 			if @user_dialogs.include?(login.to_sym)
-				@user_dialogs[login.to_sym].set_active(true)
+				@user_dialogs[login.to_sym].set_sensitive(true)
 			end
-=end
 			send_cmd( NetSoul::Message.list_users(login.to_s) )
 			Gtk.queue do
 				print_online_status()
@@ -561,12 +565,9 @@ class RubySoulNG
 						@user_model.remove(iter) if (iter[4].to_s == socket.to_s)
 					end
 				end
-=begin
-				TODO : set_active method is out of date
 				if @user_dialogs.include?(login.to_sym)
-					@user_dialogs[login.to_sym].set_active(false)
+				  @user_dialogs[login.to_sym].set_sensitive(false)
 				end
-=end
 			else
 				return false
 			end
@@ -669,13 +670,16 @@ class RubySoulNG
 			if iter
 				if (iter[8].to_s != "children" || iter[4].to_s == "num_session")
 					login = iter[3]
-					RsContact::instance().get_user_photo(login)
-		    begin
-		      iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
-		    rescue => err
-		    	$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
-		      iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
-		    end
+		      begin
+		        @rs_contact.get_user_photo(login)
+		        iter.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+login.to_s}", 32, 32))
+          rescue Gdk::PixbufError
+            $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+		        iter.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+		      rescue => err
+		        $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+            RsInfobox.new(@rsng_win, err, "error")
+		      end
 				end
 			end
 		end
@@ -883,7 +887,12 @@ class RubySoulNG
 			login = @contact_add_entry.text
 			@rs_contact.add(login, true)
 			@contact_add_entry.text = ""
-			@rs_contact.get_user_photo(login)
+			begin
+			  @rs_contact.get_user_photo(login)
+      rescue => err
+        $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+        RsInfobox.new(@rsng_win, err, "error")
+      end
 			h = @user_model.append(@user_model_iter_offline)
 			h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
 			h.set_value(1, %Q[<span weight="bold">#{login.to_s}</span>])
@@ -918,11 +927,20 @@ class RubySoulNG
 		@account_unix_password_entry		= @glade['account_unix_password_entry']
 		@account_server_host_entry			= @glade['account_server_host_entry']
 		@account_server_port_entry			= @glade['account_server_port_entry']
-		@account_connection_type_md5		= @glade['account_connection_type_md5']
-		@account_connection_type_krb5		= @glade['account_connection_type_krb5']
+		@account_connection_type_md5_radio		= @glade['account_connection_type_md5_radio']
+		@account_connection_type_kerberos_radio		= @glade['account_connection_type_kerberos_radio']
 		@account_location_entry					= @glade['account_location_entry']
 		@account_user_group_entry				= @glade['account_user_group_entry']
 		@account_connection_at_startup_checkbox	= @glade['account_connection_at_startup_checkbox']
+
+		@proxy_http_host_entry = @glade['proxy_http_host_entry']
+		@proxy_http_port_spinbutton = @glade['proxy_http_port_spinbutton']
+		@proxy_http_use_checkbox = @glade['proxy_http_use_checkbox']
+		@proxy_socks5_host_entry = @glade['proxy_socks5_host_entry']
+		@proxy_socks5_port_spinbutton = @glade['proxy_socks5_port_spinbutton']
+		@proxy_socks5_use_checkbox = @glade['proxy_socks5_use_checkbox']
+		@proxy_username_entry = @glade['proxy_username_entry']
+		@proxy_password_entry = @glade['proxy_password_entry']
 	end
 	def preferences_account_load_config(conf)
 		if conf[:login].to_s.length > 0
@@ -944,7 +962,7 @@ class RubySoulNG
 		else
 			@account_server_port_entry.text = conf[:server_port] = RsConfig::DEFAULT_NETSOUL_SERVER_PORT
 		end
-		conf[:connection_type].eql?("krb5") ? @account_connection_type_krb5.set_active(true) : @account_connection_type_md5.set_active(true)
+		conf[:connection_type].eql?(RsConfig::APP_CONNECTION_TYPE_KERBEROS) ? @account_connection_type_kerberos_radio.set_active(true) : @account_connection_type_md5_radio.set_active(true)
 		if conf[:location].to_s.length > 0
 			@account_location_entry.text = conf[:location].to_s
 		end
@@ -952,24 +970,58 @@ class RubySoulNG
 			@account_user_group_entry.text = conf[:user_group].to_s
 		end
 		conf[:connection_at_startup].eql?(true) ? @account_connection_at_startup_checkbox.set_active(true) : @account_connection_at_startup_checkbox.set_active(false)
+
+    if conf[:proxy_http_host].to_s.length > 0
+      @proxy_http_host_entry.text = conf[:proxy_http_host].to_s
+    end
+    if conf[:proxy_http_port].to_f < 65000
+      @proxy_http_port_spinbutton.set_value(conf[:proxy_http_port].to_i)
+    end
+    conf[:proxy_http_use] ? @proxy_http_use_checkbox.set_active(true) : @proxy_http_use_checkbox.set_active(false)
+    if conf[:proxy_socks5_host].to_s.length > 0
+      @proxy_socks5_host_entry.text = conf[:proxy_socks5_host].to_s
+    end
+    if conf[:proxy_socks5_port].to_i< 65000
+      @proxy_socks5_port_spinbutton.set_value(conf[:proxy_socks5_port].to_i)
+    end
+    conf[:proxy_socks5_use] ? @proxy_socks5_use_checkbox.set_active(true) : @proxy_socks5_use_checkbox.set_active(false)
+    if conf[:proxy_username].to_s.length > 0
+			@proxy_username_entry.text = conf[:proxy_username].to_s
+		end
+		if conf[:proxy_password].to_s.length > 0
+			@proxy_password_entry.text = conf[:proxy_password].to_s
+		end
 	end
 	def preferences_account_save_config
 		@rs_config.conf[:login] = @account_login_entry.text.to_s if @account_login_entry.text.length > 0
-		@rs_config.conf[:socks_password] = @account_socks_password_entry.text.to_s if @account_socks_password_entry.text.length > 0
-		@rs_config.conf[:unix_password] = @account_unix_password_entry.text.to_s if @account_unix_password_entry.text.length > 0
+		@rs_config.conf[:socks_password] = @account_socks_password_entry.text.to_s
+		@rs_config.conf[:unix_password] = @account_unix_password_entry.text.to_s
 		@rs_config.conf[:server_host] = @account_server_host_entry.text.to_s if @account_server_host_entry.text.length > 0
 		@rs_config.conf[:server_port] = @account_server_port_entry.text.to_s if @account_server_port_entry.text.length > 0
 		ns_token_found = false
 		if have_ns_token()
 			ns_token_found = true
 		end
-		@rs_config.conf[:connection_type] = @account_connection_type_krb5.active?() && ns_token_found ? "krb5" : "md5"
-		if @account_connection_type_krb5.active?() && !ns_token_found
-			RsInfobox.new(@rsng_win, "NsToken is not build for kerberos authentication, MD5 authentication selected", "warning")
+		@rs_config.conf[:connection_type] = @account_connection_type_kerberos_radio.active?() && ns_token_found ? RsConfig::APP_CONNECTION_TYPE_KERBEROS : RsConfig::APP_CONNECTION_TYPE_MD5
+		if @account_connection_type_kerberos_radio.active?() && !ns_token_found
+			RsInfobox.new(@rsng_win, "NsToken is not build for kerberos authentication, select the MD5 authentication method", "warning")
 		end
 		@rs_config.conf[:location] = @account_location_entry.text.to_s if @account_location_entry.text.length > 0
 		@rs_config.conf[:user_group] = @account_user_group_entry.text.to_s if @account_user_group_entry.text.length > 0
 		@rs_config.conf[:connection_at_startup] = @account_connection_at_startup_checkbox.active?() ? true : false
+
+		@rs_config.conf[:proxy_http_host] = @proxy_http_host_entry.text.to_s
+		if @proxy_http_port_spinbutton.value_as_int > 0 && @proxy_http_port_spinbutton.value_as_int < 65000
+	  	@rs_config.conf[:proxy_http_port] = @proxy_http_port_spinbutton.value_as_int
+    end
+		@rs_config.conf[:proxy_http_use] = @proxy_http_use_checkbox.active?() ? true : false
+		@rs_config.conf[:proxy_socks5_host] = @proxy_socks5_host_entry.text.to_s
+		if @proxy_socks5_port_spinbutton.value_as_int > 0 && @proxy_socks5_port_spinbutton.value_as_int < 65000
+	  	@rs_config.conf[:proxy_socks5_port] = @proxy_socks5_port_spinbutton.value_as_int
+    end
+		@rs_config.conf[:proxy_socks5_use] = @proxy_socks5_use_checkbox.active?() ? true : false
+		@rs_config.conf[:proxy_username] = @proxy_username_entry.text.to_s
+		@rs_config.conf[:proxy_password] = @proxy_password_entry.text.to_s
 		@rs_config.save()
 	end
 	def on_preferences_delete_event(widget, event)
@@ -1003,7 +1055,7 @@ class RubySoulNG
 		res = false
 		filename_prefix = RsConfig::APP_DIR+File::SEPARATOR+"lib"+File::SEPARATOR+"kerberos"+File::SEPARATOR+"NsToken"
 		case RUBY_PLATFORM
-		when /mswin/
+		when /(ms|bcc)win(32|64)|mingw/
 			if FileTest.exist?(filename_prefix+".dll")
 				res = true
 			end
