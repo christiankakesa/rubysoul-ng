@@ -5,6 +5,7 @@
 module NetSoul
 class Location
 	def self.get(ip)
+	  res = nil
 		data = {"lab-cisco-mid-sr"	=> "10.251.",
 				"etna"				=> "10.245.",
 				"lse"				=> "10.227.42.",
@@ -45,7 +46,7 @@ class Location
 				return res
 			end
 		end
-		return "ext"
+		return res
 	end
 end
 end #--- | module RubySoul
