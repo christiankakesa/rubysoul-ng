@@ -186,33 +186,34 @@ class RubySoulNG
 		  end
 		  @user_dialogs.clear()
 		  @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
-		  @rs_contact.load_contacts()
-		  @user_model.clear()
-		  @user_model_iter_offline = @user_model.append(nil)
-		  @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
-		  @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
-		  @user_model_iter_offline.set_value(3, "zzzzzz_z")
-		  @user_model_iter_offline.first!()
-		  if @rs_contact
-			  @rs_contact.contacts.each do |key, value|
-				  h = @user_model.append(@user_model_iter_offline)
-				  h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
-				  h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
-				  begin
-				   	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
-				  rescue => err
-					  $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
-				   	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
-				  end
-				  h.set_value(3, key.to_s)
-				  h.set_value(4, "num_session")
-				  h.set_value(5, "status")
-				  h.set_value(6, "user_data")
-				  h.set_value(7, "location")
-			  end
-		  end
 		  @rsng_state_box.set_sensitive(false)
-    else
+    end
+    @rs_contact.load_contacts()
+	  @user_model.clear()
+	  @user_model_iter_offline = @user_model.append(nil)
+	  @user_model_iter_offline.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_OFFLINE, 24, 24))
+	  @user_model_iter_offline.set_value(1, %Q[<span weight="bold" size="large">OFFLINE (0/#{@rs_contact.contacts.length})</span>])
+	  @user_model_iter_offline.set_value(3, "zzzzzz_z")
+	  @user_model_iter_offline.first!()
+	  if @rs_contact
+		  @rs_contact.contacts.each do |key, value|
+			  h = @user_model.append(@user_model_iter_offline)
+			  h.set_value(0, Gdk::Pixbuf.new(RsConfig::ICON_DISCONNECT, 24, 24))
+			  h.set_value(1, %Q[<span weight="bold">#{key.to_s}</span>])
+			  begin
+			   	h.set_value(2, Gdk::Pixbuf.new("#{@rs_config.contacts_photo_dir+File::SEPARATOR+key.to_s}", 32, 32))
+			  rescue => err
+				  $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
+			   	h.set_value(2, Gdk::Pixbuf.new(RsConfig::APP_DIR+File::SEPARATOR+'data'+File::SEPARATOR+'img_login_l', 32, 32))
+			  end
+			  h.set_value(3, key.to_s)
+			  h.set_value(4, "num_session")
+			  h.set_value(5, "status")
+			  h.set_value(6, "user_data")
+			  h.set_value(7, "location")
+		  end
+	  end
+    if reconnect
       connection()
 		end
 	end
