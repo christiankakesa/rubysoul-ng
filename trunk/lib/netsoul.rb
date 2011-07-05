@@ -93,13 +93,7 @@ module NetSoul
 
     def sock_send(str)
     	begin
-    		if !@sock.nil?
-    			@sock.puts str.to_s
-    		else
-    			$log.debug("Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}")
-				  @sock = nil
-				  raise SocketError
-    		end
+    		@sock.puts str.to_s
     	rescue SocketError, Errno::EPIPE, Errno::ECONNRESET, Errno::ETIMEDOUT => se
     		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__])
     		@sock = nil
@@ -115,19 +109,13 @@ module NetSoul
     def sock_get()
     	res = nil
     	begin
-    		if !@sock.nil?
-    			res = @sock.gets
-    		else
-    			$log.debug("Unexpected ERROR #{$!} => #{__FILE__}:#{__LINE__}")
-				  @sock = nil
-				  raise RuntimeError
-    		end
+   			res = @sock.gets
     	rescue SocketError, Errno::ECONNRESET, Errno::ETIMEDOUT => se
     		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__])
     		@sock = nil
     		reconnection = true
 			  @main_app.disconnection(reconnection) if !@main_app.nil?
-			  return nil
+			  retry
     	rescue => err
     		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 			  @sock = nil
