@@ -22,7 +22,7 @@ module NetSoul
 		    connection_values[:socks_password]	])
 		    return 'ext_user_log %s %s %s %s'%[	connection_values[:login],
 		    auth_string,
-		    Message.escape(Location::get(connection_values[:client_ip]) not nil ? connection_values[:location] : Location::get(connection_values[:client_ip])),
+		    Message.escape(Location::get(connection_values[:client_ip]).nil? ? connection_values[:location] : Location::get(connection_values[:client_ip])),
 		  Message.escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
 		end
 
