@@ -22,7 +22,7 @@ module NetSoul
 		    connection_values[:socks_password]	])
 		    return 'ext_user_log %s %s %s %s'%[	connection_values[:login],
 		    auth_string,
-		    Message.escape(Location::get(connection_values[:client_ip]) == "ext" ? connection_values[:location] : Location::get(connection_values[:client_ip])),
+		    Message.escape(Location::get(connection_values[:client_ip]) not nil ? connection_values[:location] : Location::get(connection_values[:client_ip])),
 		  Message.escape("#{RsConfig::APP_NAME} #{RsConfig::APP_VERSION}")]
 		end
 
@@ -74,38 +74,6 @@ module NetSoul
 		  return 'user_cmd user_data %s'%[Message.escape(data.to_s)]
 		end
 
-		def self.xfer(user, id, filename, size, desc)
-				return 'user_cmd msg_user %s desoul_ns_xfer %s'%[user.to_s, id.to_s, Message.escape(filename.to_s), size.to_s, Message.escape(desc.to_s)]
-		end
-
-		def self.desoul_ns_xfer(user, id, filename, size, desc)
-				return 'user_cmd msg_user %s desoul_ns_xfer %s'%[user.to_s, Message.escape("#{id.to_s} #{filename.to_s} #{size.to_s} #{desc.to_s}")]
-		end
-
-		def self.xfer_accept(user, id)
-				return 'user_cmd msg_user %s desoul_ns_xfer_accept %s'%[user.to_s, id.to_s]
-		end
-
-		def self.desoul_ns_xfer_accept(id)
-				return 'user_cmd msg_user %s desoul_ns_xfer_accept %s'%[user.to_s, id.to_s]
-		end
-
-		def self.xfer_data(id, data)
-				return 'user_cmd msg_user %s desoul_ns_xfer_data %s'%[user.to_s, Message.escape("#{id.to_s} #{Base64.b64encode(data.to_s, data.to_s.length)}")]
-		end
-
-		def self.desoul_ns_xfer_data(id, data)
-				return 'user_cmd msg_user %s desoul_ns_xfer_data %s'%[user.to_s, Message.escape("#{id.to_s} #{Base64.b64encode(data.to_s, data.to_s.length)}")]
-		end
-
-		def self.xfer_cancel(user, id)
-				return 'user_cmd msg_user %s desoul_ns_xfer_cancel %s'%[user.to_s, id.to_s]
-		end
-
-		def self.desoul_ns_xfer_cancel(id)
-				return 'user_cmd msg_user %s desoul_ns_xfer_cancel %s'%[user.to_s, id.to_s]
-		end
-
 		def self.ping
 		  return "ping 42"
 		end
@@ -115,6 +83,9 @@ module NetSoul
 		end
 
 		def self.escape(str)
+		  if str.nil? or str =""
+		    return ""
+      end
 			str = GLib.convert(str, 'ISO-8859-15//TRANSLIT', 'UTF-8//TRANSLIT')
 		  str = URI.escape(str, Regexp.new("#{URI::PATTERN::ALNUM}[:graph:][:punct:][:cntrl:][:print:][:blank:]", false, 'N'))
 		  str = URI.escape(str, Regexp.new("[^#{URI::PATTERN::ALNUM}]", false, 'N'))
@@ -122,21 +93,33 @@ module NetSoul
 		end
 
 		def self.unescape(str)
+			if str.nil? or str =""
+		    return ""
+      end
 			str = URI.unescape(str)
 			str = GLib.convert(str, 'UTF-8//TRANSLIT', 'ISO-8859-15//TRANSLIT')
 			return str
 		end
 
 		def self.ltrim(str)
-		  return str.to_s.gsub(/^\s+/, '')
+		  if str.nil? or str =""
+		    return ""
+      end
+			return str.to_s.gsub(/^\s+/, '')
 		end
 
 		def self.rtrim(str)
-		  return str.to_s.gsub(/\s+$/, '')
+		  if str.nil? or str =""
+		    return ""
+      end
+			return str.to_s.gsub(/\s+$/, '')
 		end
 
 		def self.trim(str)
-		  str = Message.ltrim(str.to_s)
+		  if str.nil? or str =""
+		    return ""
+      end
+			str = Message.ltrim(str.to_s)
 		  str = Message.rtrim(str.to_s)
 		  return str
 		end
