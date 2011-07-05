@@ -83,7 +83,7 @@ module NetSoul
 		end
 
 		def self.escape(str)
-		  if str.nil? or str =""
+		  if str.nil? or str.eql?("")
 		    return ""
       end
 			str = GLib.convert(str, 'ISO-8859-15//TRANSLIT', 'UTF-8//TRANSLIT')
@@ -93,7 +93,7 @@ module NetSoul
 		end
 
 		def self.unescape(str)
-			if str.nil? or str =""
+			if str.nil? or str.eql?("")
 		    return ""
       end
 			str = URI.unescape(str)
@@ -102,21 +102,21 @@ module NetSoul
 		end
 
 		def self.ltrim(str)
-		  if str.nil? or str =""
+		  if str.nil? or str.eql?("")
 		    return ""
       end
 			return str.to_s.gsub(/^\s+/, '')
 		end
 
 		def self.rtrim(str)
-		  if str.nil? or str =""
+		  if str.nil? or str.eql?("")
 		    return ""
       end
 			return str.to_s.gsub(/\s+$/, '')
 		end
 
 		def self.trim(str)
-		  if str.nil? or str =""
+		  if str.nil? or str.eql?("")
 		    return ""
       end
 			str = Message.ltrim(str.to_s)
