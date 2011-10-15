@@ -10,7 +10,7 @@
     <property name="default_width">290</property>
     <property name="default_height">420</property>
     <property name="icon">logo.png</property>
-    <signal name="delete_event" handler="on_RubySoulNG_delete_event" swapped="no"/>
+    <signal name="delete_event" handler="on_RubySoulNG_delete_event"/>
     <child>
       <widget class="GtkVBox" id="main_vbox">
         <property name="visible">True</property>
@@ -27,7 +27,7 @@
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
                 <property name="stock_id">gtk-connect</property>
-                <signal name="clicked" handler="on_tb_connect_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_tb_connect_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -40,7 +40,7 @@
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
                 <property name="stock_id">gtk-quit</property>
-                <signal name="clicked" handler="on_tb_exit_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_tb_exit_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -54,7 +54,7 @@
                 <property name="use_action_appearance">False</property>
                 <property name="label" translatable="yes">Contacts</property>
                 <property name="stock_id">gtk-add</property>
-                <signal name="clicked" handler="on_tb_contact_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_tb_contact_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -67,7 +67,7 @@
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
                 <property name="stock_id">gtk-preferences</property>
-                <signal name="clicked" handler="on_tb_preferences_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_tb_preferences_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -80,7 +80,7 @@
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>
                 <property name="stock_id">gtk-about</property>
-                <signal name="clicked" handler="on_tb_about_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_tb_about_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -235,7 +235,7 @@ SUCH DAMAGE.</property>
     <property name="type_hint">dialog</property>
     <property name="skip_taskbar_hint">True</property>
     <property name="gravity">static</property>
-    <signal name="delete_event" handler="on_contact_delete_event" swapped="no"/>
+    <signal name="delete_event" handler="on_contact_delete_event"/>
     <child>
       <widget class="GtkVBox" id="contact_vbox">
         <property name="visible">True</property>
@@ -249,7 +249,7 @@ SUCH DAMAGE.</property>
             <property name="secondary_icon_activatable">False</property>
             <property name="primary_icon_sensitive">True</property>
             <property name="secondary_icon_sensitive">True</property>
-            <signal name="activate" handler="on_contact_add_entry_activate" swapped="no"/>
+            <signal name="activate" handler="on_contact_add_entry_activate"/>
           </widget>
           <packing>
             <property name="expand">False</property>
@@ -282,7 +282,7 @@ SUCH DAMAGE.</property>
                 <property name="receives_default">True</property>
                 <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_contact_close_btn_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_contact_close_btn_clicked"/>
               </widget>
               <packing>
                 <property name="expand">True</property>
@@ -298,7 +298,7 @@ SUCH DAMAGE.</property>
                 <property name="receives_default">True</property>
                 <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_contact_add_btn_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_contact_add_btn_clicked"/>
               </widget>
               <packing>
                 <property name="expand">True</property>
@@ -328,7 +328,7 @@ SUCH DAMAGE.</property>
     <property name="type_hint">dialog</property>
     <property name="skip_taskbar_hint">True</property>
     <property name="gravity">static</property>
-    <signal name="delete_event" handler="on_preferences_delete_event" swapped="no"/>
+    <signal name="delete_event" handler="on_preferences_delete_event"/>
     <child>
       <widget class="GtkVBox" id="layout">
         <property name="visible">True</property>
@@ -717,6 +717,7 @@ SUCH DAMAGE.</property>
                         <child>
                           <widget class="GtkSpinButton" id="proxy_socks5_port_spinbutton">
                             <property name="visible">True</property>
+                            <property name="sensitive">False</property>
                             <property name="can_focus">True</property>
                             <property name="max_length">5</property>
                             <property name="invisible_char">•</property>
@@ -740,6 +741,7 @@ SUCH DAMAGE.</property>
                           <widget class="GtkEntry" id="proxy_http_host_entry">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
+                            <property name="tooltip" translatable="yes">User for http connection like collecting users photos</property>
                             <property name="max_length">128</property>
                             <property name="invisible_char">•</property>
                             <property name="primary_icon_activatable">False</property>
@@ -758,7 +760,9 @@ SUCH DAMAGE.</property>
                         <child>
                           <widget class="GtkEntry" id="proxy_socks5_host_entry">
                             <property name="visible">True</property>
+                            <property name="sensitive">False</property>
                             <property name="can_focus">True</property>
+                            <property name="tooltip" translatable="yes">Used for the Netsoul server connection</property>
                             <property name="max_length">128</property>
                             <property name="invisible_char">•</property>
                             <property name="primary_icon_activatable">False</property>
@@ -937,6 +941,7 @@ SUCH DAMAGE.</property>
                         <child>
                           <widget class="GtkCheckButton" id="proxy_socks5_use_checkbox">
                             <property name="visible">True</property>
+                            <property name="sensitive">False</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>
                             <property name="use_action_appearance">False</property>
@@ -1047,7 +1052,7 @@ SUCH DAMAGE.</property>
                     <property name="receives_default">True</property>
                     <property name="use_action_appearance">False</property>
                     <property name="use_stock">True</property>
-                    <signal name="clicked" handler="on_preferences_close_btn_clicked" swapped="no"/>
+                    <signal name="clicked" handler="on_preferences_close_btn_clicked"/>
                   </widget>
                 </child>
               </widget>
@@ -1065,7 +1070,7 @@ SUCH DAMAGE.</property>
                 <property name="receives_default">True</property>
                 <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_preferences_validate_btn_clicked" swapped="no"/>
+                <signal name="clicked" handler="on_preferences_validate_btn_clicked"/>
               </widget>
               <packing>
                 <property name="expand">False</property>
@@ -1084,3 +1089,4 @@ SUCH DAMAGE.</property>
     </child>
   </widget>
 </glade-interface>
+

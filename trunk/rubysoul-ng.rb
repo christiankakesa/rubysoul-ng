@@ -146,10 +146,18 @@ class RubySoulNG
 			@parse_thread = Thread.new do
 				loop do
 					begin
-						line = @ns.sock_get().to_s.chomp
-						if !line.nil? and !line.empty?
-							parse_cmd(line) # Blocking call
-						end
+					  s_read, _, s_error = IO.select([@ns.sock], nil, [@ns.sock], 60.0*11)
+					  $log.debug("IO.select : #{s_read.inspect} - #{s_error.inspect}")
+					  if s_error && s_error.any?
+					    raise SocketError, "#{s_error.first}"
+					  elsif s_read && s_read.any? && s_read.include?(@ns.sock)
+				      line = @ns.sock_get().to_s.chomp||nil
+				      if !line.nil? and !line.empty?
+				      	parse_cmd(line) # Blocking call
+				      end
+		        else
+		          sleep(1.0)
+		        end
 					rescue => err
 						$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 						sleep(1.0) # We have time to share with another threads
@@ -187,6 +195,10 @@ class RubySoulNG
 		  @user_dialogs.clear()
 		  @rsng_tb_connect.set_stock_id(Gtk::Stock::CONNECT)
 		  @rsng_state_box.set_sensitive(false)
+    else
+      @user_dialogs.each do |user, dialog|
+			  dialog.set_sensitive(false)
+		  end
     end
     @rs_contact.load_contacts()
 	  @user_model.clear()
@@ -397,6 +409,9 @@ class RubySoulNG
 				@rs_contact.contacts[login.to_sym][:connections][socket.to_i][:status] = status.to_s
 				@rs_contact.contacts[login.to_sym][:connections][socket.to_i][:user_data] = user_data.to_s
 				@rs_contact.contacts[login.to_sym][:connections][socket.to_i][:location] = location.to_s
+				if @user_dialogs.include?(login.to_sym)
+				  @user_dialogs[login.to_sym].set_sensitive(true)
+			  end
 			else
 				rsng_user_view_update()
 			end
