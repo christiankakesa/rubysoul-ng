@@ -11,15 +11,20 @@ rescue LoadError
   puts "Error: #{$!}"; exit!;
 end
 
-$log = Logger.new(STDOUT)
-$log = Logger.new(STDERR)
-$log.level = Logger::DEBUG if $DEBUG
+if not $DEBUG
+	$log = Logger.new(STDERR)
+	$log.level = Logger::WARN
+else
+	$log = Logger.new(STDOUT)
+	$log.level = Logger::DEBUG
+end
 
 module NetSoul
   class NetSoul
     include Singleton
 
-    attr_reader :connection_values, :authenticated, :sock
+    attr_reader :connection_values, :authenticated
+    attr_accessor :sock
 
     def initialize
       @main_app = nil
@@ -36,10 +41,9 @@ module NetSoul
     	else
 			  begin
 				  @sock = TCPSocket.new(@rs_config.conf[:server_host].to_s, @rs_config.conf[:server_port].to_i)
-			  rescue => err
+        rescue => err
 				  $log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 				  @sock = nil
-				  @main_app.disconnection() if !@main_app.nil?
 				  return false
 			  end
       end
@@ -85,9 +89,7 @@ module NetSoul
     end
 
     def disconnect
-      if !@sock.nil?
-      	sock_send(Message.ns_exit())
-      end
+      sock_send(Message.ns_exit())
       sock_close()
     end
 
@@ -99,6 +101,7 @@ module NetSoul
     		@sock = nil
     		reconnection = true
 			  @main_app.disconnection(reconnection) if !@main_app.nil?
+			  retry
     	rescue => err
     		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [err.class, err, __FILE__, __LINE__])
 			  @sock = nil
@@ -110,7 +113,7 @@ module NetSoul
     	res = nil
     	begin
    			res = @sock.gets
-    	rescue SocketError, Errno::ECONNRESET, Errno::ETIMEDOUT => se
+    	rescue SocketError, Errno::EPIPE, Errno::ECONNRESET, Errno::ETIMEDOUT => se
     		$log.warn("Unexpected ERROR (%s): %s => %s:%d\n" % [se.class, se, __FILE__, __LINE__])
     		@sock = nil
     		reconnection = true
@@ -131,7 +134,7 @@ module NetSoul
     end
 
     def get_server_timestamp
-      Time.now.to_i - @connection_values[:timestamp_diff].to_i
+      return Time.now.to_i - @connection_values[:timestamp_diff].to_i
     end
   end
 end
