@@ -16,7 +16,7 @@ This version give ionis students more powerfull functionnalities like chat, cont
         sudo aptitude install libkrb5-dev libgssapi2-heimdal
 
 
-# Old videos
+# Videos
 
 ## RubySoul-NG 0.1.0a
 
