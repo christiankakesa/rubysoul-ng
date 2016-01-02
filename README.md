@@ -20,4 +20,4 @@ This version give ionis students more powerfull functionnalities like chat, cont
 
 ## RubySoul-NG 0.1.0a
 
-[![RubySoul-NG 0.1.0a](http://images.vimeo.com/16/56/26/165626753/165626753_640.jpg)](http://vimeo.com/2012482)
+[![RubySoul-NG 0.1.0a](https://i.vimeocdn.com/video/86548062.webp?mw=960&mh=540)](http://vimeo.com/2012482)
